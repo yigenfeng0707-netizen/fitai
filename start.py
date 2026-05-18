@@ -2,8 +2,8 @@
 import sys
 import os
 
- # 加力 backend 目幕到一 Python 迭深
-#sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
+# Add backend directory to Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
 
 from app.main import app
 
