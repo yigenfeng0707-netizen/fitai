@@ -1,0 +1,56 @@
+name: fitai
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - 8000
+    environment:
+      - DATABASE_URL=${{ secrets.DATABASE_URL }}
+      - REDIS_URL=${{ secrets.REDIS_URL }}
+      - SECRET_KEY=${{ secrets.SECRET_KEY }}
+      - DEEPSEEK_API_KEY=${{ secrets.DEEPSEEK_API_KEY }}
+    depends_on:
+      - postgres
+      - redis
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - 80
+    depends_on:
+      - backend
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=fitai
+      - POSTGRES_USER=fitai
+      - POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --requirepass ${{ secrets.REDIS_PASSWORD }}
+    volumes:
+      - redis_data:/data
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  postgres_data:
+  redis_data:

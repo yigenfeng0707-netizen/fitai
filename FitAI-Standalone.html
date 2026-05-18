@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FitAI - 健身/瑜伽/教培 AI智能管理系统</title>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f0f2f5; min-height: 100vh; }
+    
+    /* Login Styles */
+    .login-page { display: flex; min-height: 100vh; }
+    .login-left { flex: 1; background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%); display: flex; align-items: center; justify-content: center; padding: 40px; }
+    .login-left-content { text-align: center; color: white; }
+    .login-left h1 { font-size: 48px; margin-bottom: 16px; }
+    .login-left p { font-size: 20px; opacity: 0.9; }
+    .login-right { width: 480px; display: flex; align-items: center; justify-content: center; background: white; padding: 40px; }
+    .login-box { width: 100%; max-width: 320px; }
+    .login-box h2 { font-size: 28px; color: #1f1f1f; margin-bottom: 8px; }
+    .login-box p { color: #8c8c8c; margin-bottom: 32px; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-size: 14px; font-weight: 500; color: #595959; margin-bottom: 8px; }
+    .form-group input, .form-group select { width: 100%; padding: 12px 16px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 14px; transition: all 0.2s; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: #1890ff; box-shadow: 0 0 0 2px rgba(24,144,255,0.1); }
+    .btn { display: inline-block; padding: 12px 24px; background: #1890ff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: 500; transition: all 0.2s; width: 100%; }
+    .btn:hover { background: #096dd9; }
+    .btn-success { background: #52c41a; }
+    .btn-success:hover { background: #389e0d; }
+    .btn-danger { background: #ff4d4f; }
+    .btn-danger:hover { background: #cf1322; }
+    .btn-warning { background: #faad14; }
+    .btn-warning:hover { background: #d08700; }
+    .btn-small { padding: 6px 12px; font-size: 12px; }
+    .btn-full { width: 100%; }
+    
+    /* Layout */
+    .header { background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%); color: white; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.15); position: fixed; top: 0; left: 0; right: 0; z-index: 1000; }
+    .header-left { display: flex; align-items: center; gap: 16px; }
+    .header h1 { font-size: 20px; font-weight: 600; }
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    .user-info { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+    .user-avatar { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; }
+    .logout-btn { padding: 6px 16px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; color: white; cursor: pointer; font-size: 14px; }
+    .logout-btn:hover { background: rgba(255,255,255,0.3); }
+    
+    .main-layout { display: flex; margin-top: 64px; min-height: calc(100vh - 64px); }
+    .sidebar { width: 220px; background: white; border-right: 1px solid #e8e8e8; position: fixed; top: 64px; left: 0; bottom: 0; overflow-y: auto; }
+    .menu-item { padding: 14px 24px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #595959; font-size: 14px; border-left: 3px solid transparent; transition: all 0.2s; }
+    .menu-item:hover { background: #f5f5f5; color: #1890ff; }
+    .menu-item.active { background: #e6f7ff; color: #1890ff; border-left-color: #1890ff; }
+    .menu-icon { font-size: 18px; }
+    
+    .content { flex: 1; margin-left: 220px; padding: 24px; }
+    
+    /* Cards & Containers */
+    .page-title { font-size: 20px; font-weight: 600; color: #1f1f1f; margin-bottom: 24px; }
+    .card { background: white; border-radius: 8px; padding: 24px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .card-title { font-size: 16px; font-weight: 600; color: #1f1f1f; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+    
+    /* Stats Grid */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 24px; }
+    .stat-card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .stat-value { font-size: 32px; font-weight: 700; color: #1890ff; }
+    .stat-label { font-size: 14px; color: #8c8c8c; margin-top: 4px; }
+    .stat-change { font-size: 12px; margin-top: 8px; }
+    .stat-change.up { color: #52c41a; }
+    .stat-change.down { color: #ff4d4f; }
+    
+    /* Tables */
+    .table-container { overflow-x: auto; }
+    .table { width: 100%; border-collapse: collapse; }
+    .table th, .table td { padding: 14px 12px; text-align: left; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+    .table th { background: #fafafa; font-weight: 600; color: #595959; }
+    .table tr:hover { background: #fafafa; }
+    .table-actions { display: flex; gap: 8px; }
+    
+    /* Tags */
+    .tag { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 500; }
+    .tag-success { background: #f6ffed; color: #52c41a; }
+    .tag-warning { background: #fff7e6; color: #fa8c16; }
+    .tag-error { background: #fff2f0; color: #ff4d4f; }
+    .tag-info { background: #e6f7ff; color: #1890ff; }
+    
+    /* Modal */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+    .modal { background: white; border-radius: 8px; padding: 24px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
+    .modal-header { font-size: 18px; font-weight: 600; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+    .modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #8c8c8c; }
+    .modal-close:hover { color: #595959; }
+    
+    /* Charts */
+    .chart-container { height: 300px; }
+    
+    /* Tabs */
+    .tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid #e8e8e8; padding-bottom: 12px; }
+    .tab { padding: 8px 16px; cursor: pointer; border-radius: 4px; font-size: 14px; color: #595959; background: #f5f5f5; }
+    .tab:hover { color: #1890ff; }
+    .tab.active { background: #1890ff; color: white; }
+    
+    /* Search */
+    .search-bar { display: flex; gap: 12px; margin-bottom: 20px; }
+    .search-input { flex: 1; padding: 10px 16px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 14px; }
+    .search-input:focus { outline: none; border-color: #1890ff; }
+    
+    /* Toast notification */
+    .toast { position: fixed; top: 80px; right: 24px; padding: 12px 24px; border-radius: 6px; color: white; font-size: 14px; z-index: 5000; }
+    .toast-success { background: #52c41a; }
+    .toast-error { background: #ff4d4f; }
+    .toast-info { background: #1890ff; }
+    
+    /* Charts Grid */
+    .charts-row { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-top: 20px; }
+    
+    /* Quick Actions */
+    .quick-actions { display: flex; gap: 12px; margin-bottom: 20px; }
+    .quick-action-btn { padding: 12px 20px; background: white; border: 1px solid #d9d9d9; border-radius: 6px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+    .quick-action-btn:hover { border-color: #1890ff; color: #1890ff; }
+    
+    /* Forms */
+    .form-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-size: 14px; font-weight: 500; color: #595959; margin-bottom: 8px; }
+    .form-group input, .form-group select { width: 100%; padding: 12px 16px; border: 1px solid #d9d9d9; border-radius: 6px; font-size: 14px; }
+    .form-actions { display: flex; gap: 12px; margin-top: 24px; justify-content: flex-end; }
+    
+    /* Avatar */
+    .member-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <!-- Toast Notification -->
+  <div id="toast" class="toast" style="display: none;"></div>
+
+  <!-- Login Page -->
+  <div id="loginPage" class="login-page">
+    <div class="login-left">
+      <div class="login-left-content">
+        <h1>🏋️ FitAI</h1>
+        <p>健身/瑜伽/教培 · AI智能管理系统</p>
+        <p style="margin-top: 40px; font-size: 16px; opacity: 0.8;">商用级 · 可私有化部署 · 支持多门店连锁</p>
+      </div>
+    </div>
+    <div class="login-right">
+      <div class="login-box">
+        <h2>欢迎登录</h2>
+        <p>请输入您的账号信息</p>
+        <form id="loginForm">
+          <div class="form-group">
+            <label>用户名</label>
+            <input type="text" id="loginUsername" placeholder="请输入用户名" value="admin">
+          </div>
+          <div class="form-group">
+            <label>密码</label>
+            <input type="password" id="loginPassword" placeholder="请输入密码" value="admin123">
+          </div>
+          <button type="submit" class="btn">登 录</button>
+        </form>
+        <p style="margin-top: 16px; font-size: 12px; color: #8c8c8c; text-align: center;">
+          测试账号: admin / admin123
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div id="mainApp" style="display: none;">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-left">
+        <h1>🏋️ FitAI</h1>
+        <span style="opacity: 0.8;">|</span>
+        <span id="storeName">FitAI旗舰店</span>
+      </div>
+      <div class="header-right">
+        <div class="user-info">
+          <div class="user-avatar" id="userAvatar">管</div>
+          <span id="userName">超级管理员</span>
+        </div>
+        <button class="logout-btn" onclick="logout()">退出登录</button>
+      </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="main-layout">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div class="menu-item active" onclick="showPage('dashboard')">
+          <span class="menu-icon">📊</span>
+          <span>数据看板</span>
+        </div>
+        <div class="menu-item" onclick="showPage('members')">
+          <span class="menu-icon">👥</span>
+          <span>会员管理</span>
+        </div>
+        <div class="menu-item" onclick="showPage('courses')">
+          <span class="menu-icon">📚</span>
+          <span>课程管理</span>
+        </div>
+        <div class="menu-item" onclick="showPage('schedules')">
+          <span class="menu-icon">📅</span>
+          <span>排课管理</span>
+        </div>
+        <div class="menu-item" onclick="showPage('bookings')">
+          <span class="menu-icon">📝</span>
+          <span>预约管理</span>
+        </div>
+        <div class="menu-item" onclick="showPage('coaches')">
+          <span class="menu-icon">👨‍🏫</span>
+          <span>教练管理</span>
+        </div>
+        <div class="menu-item" onclick="showPage('finance')">
+          <span class="menu-icon">💰</span>
+          <span>财务管理</span>
+        </div>
+        <div class="menu-item" onclick="showPage('marketing')">
+          <span class="menu-icon">🎁</span>
+          <span>营销管理</span>
+        </div>
+        <div class="menu-item" onclick="showPage('crm')">
+          <span class="menu-icon">🎯</span>
+          <span>潜客CRM</span>
+        </div>
+        <div class="menu-item" onclick="showPage('settings')">
+          <span class="menu-icon">⚙️</span>
+          <span>系统设置</span>
+        </div>
+      </div>
+
+      <!-- Content Area -->
+      <div class="content" id="contentArea">
+        <!-- Dashboard Page -->
+        <div id="page-dashboard" class="page">
+          <h2 class="page-title">数据看板</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value" id="statMembers">128</div>
+              <div class="stat-label">总会员数</div>
+              <div class="stat-change up">↑ 12% 较上月</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="statTodayBookings">32</div>
+              <div class="stat-label">今日预约</div>
+              <div class="stat-change up">↑ 8% 较昨日</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="statRevenue">¥28,650</div>
+              <div class="stat-label">本月营收</div>
+              <div class="stat-change up">↑ 15% 较上月</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="statAttendance">96%</div>
+              <div class="stat-label">到课率</div>
+              <div class="stat-change down">↓ 2% 较上周</div>
+            </div>
+          </div>
+          
+          <div class="charts-row">
+            <div class="card">
+              <div class="card-title">📈 营收趋势</div>
+              <div id="revenueChart" class="chart-container"></div>
+            </div>
+            <div class="card">
+              <div class="card-title">🔥 课程热度 TOP5</div>
+              <div id="courseHotChart" class="chart-container"></div>
+            </div>
+          </div>
+          
+          <div class="charts-row">
+            <div class="card">
+              <div class="card-title">👥 会员增长趋势</div>
+              <div id="memberTrendChart" class="chart-container"></div>
+            </div>
+            <div class="card">
+              <div class="card-title">🏆 教练绩效</div>
+              <div id="coachPerformanceChart" class="chart-container"></div>
+            </div>
+          </div>
+          
+          <div class="card" style="margin-top: 20px;">
+            <div class="card-title">📋 今日课程安排</div>
+            <div class="table-container">
+              <table class="table" id="todayScheduleTable">
+                <thead>
+                  <tr>
+                    <th>时间</th>
+                    <th>课程</th>
+                    <th>教练</th>
+                    <th>教室</th>
+                    <th>预约/容量</th>
+                    <th>签到率</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="todayScheduleBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Members Page -->
+        <div id="page-members" class="page" style="display: none;">
+          <h2 class="page-title">会员管理</h2>
+          <div class="quick-actions">
+            <button class="quick-action-btn" onclick="showMemberModal()">➕ 新增会员</button>
+            <button class="quick-action-btn" onclick="exportMembers()">📥 导出数据</button>
+          </div>
+          <div class="search-bar">
+            <input type="text" class="search-input" id="memberSearch" placeholder="搜索会员姓名、手机号、会员号..." oninput="filterMembers()">
+            <select class="search-input" style="width: 150px;" id="memberCardType" onchange="filterMembers()">
+              <option value="">全部卡种</option>
+              <option value="monthly">月卡</option>
+              <option value="yearly">年卡</option>
+              <option value="times">次卡</option>
+              <option value="stored">储值卡</option>
+            </select>
+            <select class="search-input" style="width: 120px;" id="memberStatus" onchange="filterMembers()">
+              <option value="">全部状态</option>
+              <option value="active">正常</option>
+              <option value="expiring">即将到期</option>
+              <option value="expired">已过期</option>
+              <option value="frozen">已冻结</option>
+            </select>
+          </div>
+          <div class="card">
+            <div class="table-container">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>会员号</th>
+                    <th>姓名</th>
+                    <th>性别</th>
+                    <th>手机号</th>
+                    <th>卡种</th>
+                    <th>剩余课时</th>
+                    <th>到期日期</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="membersTableBody"></tbody>
+              </table>
+            </div>
+            <div class="pagination">
+              <div class="pagination-info">共 <span id="membersTotal">0</span> 条记录</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Courses Page -->
+        <div id="page-courses" class="page" style="display: none;">
+          <h2 class="page-title">课程管理</h2>
+          <div class="quick-actions">
+            <button class="quick-action-btn" onclick="showCourseModal()">➕ 新增课程</button>
+            <button class="quick-action-btn" onclick="showCategoryModal()">📂 课程分类</button>
+            <button class="quick-action-btn" onclick="showClassroomModal()">🏠 教室管理</button>
+          </div>
+          <div class="tabs">
+            <div class="tab active" onclick="filterCourses('all')">全部课程</div>
+            <div class="tab" onclick="filterCourses('group')">团课</div>
+            <div class="tab" onclick="filterCourses('private')">私教</div>
+            <div class="tab" onclick="filterCourses('training')">培训课</div>
+          </div>
+          <div class="card">
+            <div class="table-container">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>课程名称</th>
+                    <th>分类</th>
+                    <th>类型</th>
+                    <th>时长</th>
+                    <th>价格</th>
+                    <th>最大人数</th>
+                    <th>已预约</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="coursesTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Schedules Page -->
+        <div id="page-schedules" class="page" style="display: none;">
+          <h2 class="page-title">排课管理</h2>
+          <div class="quick-actions">
+            <button class="quick-action-btn" onclick="showScheduleModal()">➕ 新增加课</button>
+          </div>
+          <div class="search-bar">
+            <input type="date" class="search-input" id="scheduleDate" onchange="filterSchedules()" style="width: 180px;">
+            <select class="search-input" style="width: 150px;" id="scheduleCoach" onchange="filterSchedules()">
+              <option value="">全部教练</option>
+            </select>
+            <select class="search-input" style="width: 150px;" id="scheduleCourse" onchange="filterSchedules()">
+              <option value="">全部课程</option>
+            </select>
+          </div>
+          <div class="card">
+            <div class="table-container">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>日期</th>
+                    <th>时间</th>
+                    <th>课程</th>
+                    <th>教练</th>
+                    <th>教室</th>
+                    <th>预约/容量</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="schedulesTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bookings Page -->
+        <div id="page-bookings" class="page" style="display: none;">
+          <h2 class="page-title">预约管理</h2>
+          <div class="search-bar">
+            <input type="text" class="search-input" id="bookingSearch" placeholder="搜索会员姓名、手机号...">
+            <select class="search-input" style="width: 150px;" id="bookingStatus" onchange="filterBookings()">
+              <option value="">全部状态</option>
+              <option value="booked">已预约</option>
+              <option value="checked_in">已签到</option>
+              <option value="cancelled">已取消</option>
+              <option value="noshow">爽约</option>
+            </select>
+          </div>
+          <div class="card">
+            <div class="table-container">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>会员</th>
+                    <th>课程</th>
+                    <th>预约时间</th>
+                    <th>签到时间</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="bookingsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Coaches Page -->
+        <div id="page-coaches" class="page" style="display: none;">
+          <h2 class="page-title">教练管理</h2>
+          <div class="quick-actions">
+            <button class="quick-action-btn" onclick="showCoachModal()">➕ 新增教练</button>
+          </div>
+          <div class="card">
+            <div class="table-container">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>姓名</th>
+                    <th>手机号</th>
+                    <th>资质认证</th>
+                    <th>专长</th>
+                    <th>课时费</th>
+                    <th>本月课时</th>
+                    <th>学员数</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="coachesTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Finance Page -->
+        <div id="page-finance" class="page" style="display: none;">
+          <h2 class="page-title">财务管理</h2>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value">¥45,280</div>
+              <div class="stat-label">本月收入</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">¥12,450</div>
+              <div class="stat-label">本月支出</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">¥32,830</div>
+              <div class="stat-label">本月利润</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value">¥8,520</div>
+              <div class="stat-label">待收款</div>
+            </div>
+          </div>
+          <div class="tabs">
+            <div class="tab active" onclick="showFinanceTab('orders')">订单记录</div>
+            <div class="tab" onclick="showFinanceTab('refunds')">退款记录</div>
+            <div class="tab" onclick="showFinanceTab('expenditure')">支出记录</div>
+            <div class="tab" onclick="showFinanceTab('reports')">财务报表</div>
+          </div>
+          <div class="card">
+            <div class="table-container">
+              <table class="table">
+                <thead id="financeTableHead">
+                  <tr>
+                    <th>订单号</th>
+                    <th>会员</th>
+                    <th>类型</th>
+                    <th>金额</th>
+                    <th>支付方式</th>
+                    <th>时间</th>
+                    <th>状态</th>
+                  </tr>
+                </thead>
+                <tbody id="financeTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Marketing Page -->
+        <div id="page-marketing" class="page" style="display: none;">
+          <h2 class="page-title">营销管理</h2>
+          <div class="quick-actions">
+            <button class="quick-action-btn" onclick="showCouponModal()">🎫 创建优惠券</button>
+            <button class="quick-action-btn" onclick="showActivityModal()">🎉 创建活动</button>
+          </div>
+          <div class="card">
+            <div class="card-title">🎫 优惠券列表</div>
+            <div class="table-container">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>名称</th>
+                    <th>类型</th>
+                    <th>面值</th>
+                    <th>使用条件</th>
+                    <th>已发放</th>
+                    <th>已使用</th>
+                    <th>有效期</th>
+                    <th>状态</th>
+                  </tr>
+                </thead>
+                <tbody id="couponsTableBody">
+                  <tr>
+                    <td>新客专享券</td>
+                    <td><span class="tag tag-info">新人券</span></td>
+                    <td>¥50</td>
+                    <td>满500可用</td>
+                    <td>156张</td>
+                    <td>89张</td>
+                    <td>2026-12-31</td>
+                    <td><span class="tag tag-success">进行中</span></td>
+                  </tr>
+                  <tr>
+                    <td>续费礼包</td>
+                    <td><span class="tag tag-warning">续费券</span></td>
+                    <td>¥100</td>
+                    <td>续费满1000可用</td>
+                    <td>78张</td>
+                    <td>45张</td>
+                    <td>2026-12-31</td>
+                    <td><span class="tag tag-success">进行中</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- CRM Page -->
+        <div id="page-crm" class="page" style="display: none;">
+          <h2 class="page-title">潜客CRM</h2>
+          <div class="quick-actions">
+            <button class="quick-action-btn" onclick="showLeadModal()">➕ 添加线索</button>
+            <button class="quick-action-btn" onclick="showImportModal()">📥 批量导入</button>
+          </div>
+          <div class="tabs">
+            <div class="tab active" onclick="filterLeads('all')">全部线索</div>
+            <div class="tab" onclick="filterLeads('new')">新线索</div>
+            <div class="tab" onclick="filterLeads('following')">跟进中</div>
+            <div class="tab" onclick="filterLeads('converted')">已转化</div>
+            <div class="tab" onclick="filterLeads('invalid')">无效</div>
+          </div>
+          <div class="card">
+            <div class="table-container">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>姓名</th>
+                    <th>电话</th>
+                    <th>来源</th>
+                    <th>意向课程</th>
+                    <th>跟进状态</th>
+                    <th>最近跟进</th>
+                    <th>跟进人</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="leadsTableBody">
+                  <tr>
+                    <td><div style="display: flex; align-items: center; gap: 10px;"><div class="member-avatar">陈</div>陈小姐</div></td>
+                    <td>139****1234</td>
+                    <td>抖音推广</td>
+                    <td>瑜伽</td>
+                    <td><span class="tag tag-warning">跟进中</span></td>
+                    <td>2小时前</td>
+                    <td>前台小张</td>
+                    <td><button class="btn btn-small btn-success">跟进</button></td>
+                  </tr>
+                  <tr>
+                    <td><div style="display: flex; align-items: center; gap: 10px;"><div class="member-avatar">林</div>林先生</div></td>
+                    <td>138****5678</td>
+                    <td>朋友推荐</td>
+                    <td>私教</td>
+                    <td><span class="tag tag-info">新线索</span></td>
+                    <td>1天前</td>
+                    <td>前台小张</td>
+                    <td><button class="btn btn-small btn-success">跟进</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Page -->
+        <div id="page-settings" class="page" style="display: none;">
+          <h2 class="page-title">系统设置</h2>
+          <div class="form-row">
+            <div class="card">
+              <div class="card-title">👤 用户管理</div>
+              <div style="margin-bottom: 16px;">
+                <button class="btn btn-small" onclick="showUserModal()">➕ 新增用户</button>
+              </div>
+              <div class="table-container">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>用户名</th>
+                      <th>姓名</th>
+                      <th>角色</th>
+                      <th>手机号</th>
+                      <th>状态</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="usersTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title">🔐 角色权限</div>
+              <div class="table-container">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>角色</th>
+                      <th>描述</th>
+                      <th>人数</th>
+                      <th>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rolesTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="margin-top: 20px;">
+            <div class="card-title">⚙️ 系统配置</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>系统名称</label>
+                <input type="text" id="sysName" value="FitAI智能健身管理系统">
+              </div>
+              <div class="form-group">
+                <label>门店名称</label>
+                <input type="text" id="storeNameInput" value="FitAI旗舰店">
+              </div>
+              <div class="form-group">
+                <label>联系电话</label>
+                <input type="text" id="sysPhone" value="400-888-8888">
+              </div>
+              <div class="form-group">
+                <label>预约提前天数</label>
+                <input type="number" id="bookingDays" value="7">
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn" onclick="saveSettings()" style="width: auto;">保存配置</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Member Modal -->
+  <div id="memberModal" class="modal-overlay" style="display: none;">
+    <div class="modal">
+      <div class="modal-header">
+        <span id="memberModalTitle">新增会员</span>
+        <button class="modal-close" onclick="closeModal('memberModal')">×</button>
+      </div>
+      <form id="memberForm">
+        <input type="hidden" id="memberId">
+        <div class="form-row">
+          <div class="form-group">
+            <label>姓名 *</label>
+            <input type="text" id="memberName" required>
+          </div>
+          <div class="form-group">
+            <label>手机号 *</label>
+            <input type="tel" id="memberPhone" required maxlength="11">
+          </div>
+          <div class="form-group">
+            <label>性别</label>
+            <select id="memberGender">
+              <option value="male">男</option>
+              <option value="female">女</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>生日</label>
+            <input type="date" id="memberBirthday">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-small" onclick="closeModal('memberModal')" style="width: auto; background: #999;">取消</button>
+          <button type="submit" class="btn btn-small" style="width: auto;">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Course Modal -->
+  <div id="courseModal" class="modal-overlay" style="display: none;">
+    <div class="modal">
+      <div class="modal-header">
+        <span id="courseModalTitle">新增课程</span>
+        <button class="modal-close" onclick="closeModal('courseModal')">×</button>
+      </div>
+      <form id="courseForm">
+        <input type="hidden" id="courseId">
+        <div class="form-row">
+          <div class="form-group">
+            <label>课程名称 *</label>
+            <input type="text" id="courseName" required>
+          </div>
+          <div class="form-group">
+            <label>课程分类 *</label>
+            <select id="courseCategory" required>
+              <option value="1">瑜伽</option>
+              <option value="2">普拉提</option>
+              <option value="3">力量训练</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>课程类型 *</label>
+            <select id="courseType" required>
+              <option value="group">团课</option>
+              <option value="private">私教</option>
+              <option value="training">培训课</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>时长(分钟) *</label>
+            <input type="number" id="courseDuration" required value="60">
+          </div>
+          <div class="form-group">
+            <label>价格(元) *</label>
+            <input type="number" id="coursePrice" required value="120">
+          </div>
+          <div class="form-group">
+            <label>最大人数</label>
+            <input type="number" id="courseMaxParticipants" value="15">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-small" onclick="closeModal('courseModal')" style="width: auto; background: #999;">取消</button>
+          <button type="submit" class="btn btn-small" style="width: auto;">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Schedule Modal -->
+  <div id="scheduleModal" class="modal-overlay" style="display: none;">
+    <div class="modal">
+      <div class="modal-header">
+        <span>新增排课</span>
+        <button class="modal-close" onclick="closeModal('scheduleModal')">×</button>
+      </div>
+      <form id="scheduleForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label>课程 *</label>
+            <select id="scheduleCourseSelect" required>
+              <option value="">请选择课程</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>教练 *</label>
+            <select id="scheduleCoachSelect" required>
+              <option value="">请选择教练</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>日期 *</label>
+            <input type="date" id="scheduleDateInput" required>
+          </div>
+          <div class="form-group">
+            <label>开始时间 *</label>
+            <input type="time" id="scheduleStartTime" required value="09:00">
+          </div>
+          <div class="form-group">
+            <label>结束时间 *</label>
+            <input type="time" id="scheduleEndTime" required value="10:00">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-small" onclick="closeModal('scheduleModal')" style="width: auto; background: #999;">取消</button>
+          <button type="submit" class="btn btn-small" style="width: auto;">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Coach Modal -->
+  <div id="coachModal" class="modal-overlay" style="display: none;">
+    <div class="modal">
+      <div class="modal-header">
+        <span id="coachModalTitle">新增教练</span>
+        <button class="modal-close" onclick="closeModal('coachModal')">×</button>
+      </div>
+      <form id="coachForm">
+        <input type="hidden" id="coachId">
+        <div class="form-row">
+          <div class="form-group">
+            <label>姓名 *</label>
+            <input type="text" id="coachName" required>
+          </div>
+          <div class="form-group">
+            <label>手机号 *</label>
+            <input type="tel" id="coachPhone" required>
+          </div>
+          <div class="form-group">
+            <label>资质认证</label>
+            <input type="text" id="coachCertificate">
+          </div>
+          <div class="form-group">
+            <label>专长</label>
+            <input type="text" id="coachSpecialty">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-small" onclick="closeModal('coachModal')" style="width: auto; background: #999;">取消</button>
+          <button type="submit" class="btn btn-small" style="width: auto;">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Data Store
+    let membersData = [
+      { id: 1, name: '张小明', phone: '139****0001', gender: 'male', card_type: '月卡', remaining_classes: 25, end_date: '2026-06-15', status: 'active' },
+      { id: 2, name: '李小红', phone: '139****0002', gender: 'female', card_type: '年卡', remaining_classes: 85, end_date: '2027-05-10', status: 'active' },
+      { id: 3, name: '王小华', phone: '139****0003', gender: 'male', card_type: '次卡', remaining_classes: 12, end_date: '2026-05-20', status: 'expiring' },
+      { id: 4, name: '赵丽', phone: '139****0004', gender: 'female', card_type: '储值卡', remaining_classes: 0, end_date: '2026-04-01', status: 'expired' },
+      { id: 5, name: '钱伟', phone: '139****0005', gender: 'male', card_type: '月卡', remaining_classes: 28, end_date: '2026-06-01', status: 'active' },
+      { id: 6, name: '孙静', phone: '139****0006', gender: 'female', card_type: '年卡', remaining_classes: 96, end_date: '2027-08-15', status: 'active' }
+    ];
+    
+    let coursesData = [
+      { id: 1, name: '基础瑜伽', category: '瑜伽', type: 'group', duration: 60, price: 120, max_participants: 15, booked: 12 },
+      { id: 2, name: '高温瑜伽', category: '瑜伽', type: 'group', duration: 60, price: 150, max_participants: 12, booked: 10 },
+      { id: 3, name: '私教普拉提', category: '普拉提', type: 'private', duration: 45, price: 300, max_participants: 1, booked: 1 },
+      { id: 4, name: '力量训练', category: '力量训练', type: 'group', duration: 60, price: 100, max_participants: 20, booked: 8 }
+    ];
+    
+    let schedulesData = [
+      { id: 1, date: new Date().toISOString().split('T')[0], start_time: '09:00', end_time: '10:00', course: '基础瑜伽', coach: '李教练', classroom: '阳光瑜伽室', booked: 12, capacity: 15, status: 'available' },
+      { id: 2, date: new Date().toISOString().split('T')[0], start_time: '14:00', end_time: '15:00', course: '高温瑜伽', coach: '李教练', classroom: '阳光瑜伽室', booked: 10, capacity: 12, status: 'available' },
+      { id: 3, date: new Date().toISOString().split('T')[0], start_time: '19:00', end_time: '20:00', course: '力量训练', coach: '王教练', classroom: '力量训练室', booked: 8, capacity: 20, status: 'available' }
+    ];
+    
+    let coachesData = [
+      { id: 1, name: '李教练', phone: '138****0002', certificate: '高级瑜伽教练认证', specialty: '瑜伽、普拉提', hourly_rate: 200, monthly_hours: 48, students: 25 },
+      { id: 2, name: '王教练', phone: '138****0003', certificate: '国家级健身教练', specialty: '力量训练、功能性训练', hourly_rate: 250, monthly_hours: 36, students: 18 },
+      { id: 3, name: '张教练', phone: '138****0004', certificate: '普拉提认证教练', specialty: '普拉提、康复训练', hourly_rate: 220, monthly_hours: 42, students: 20 }
+    ];
+    
+    let usersData = [
+      { id: 1, username: 'admin', name: '超级管理员', role: '超级管理员', phone: '138****0000', status: 'active' },
+      { id: 2, username: 'reception', name: '前台小张', role: '前台', phone: '138****0001', status: 'active' },
+      { id: 3, username: 'coach001', name: '李教练', role: '教练', phone: '138****0002', status: 'active' }
+    ];
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('scheduleDate').valueAsDate = new Date();
+      document.getElementById('scheduleDateInput').valueAsDate = new Date();
+    });
+
+    // Login Handler
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const username = document.getElementById('loginUsername').value;
+      const password = document.getElementById('loginPassword').value;
+      
+      if (username === 'admin' && password === 'admin123') {
+        showMainApp();
+        showToast('演示模式登录成功！', 'success');
+      } else {
+        showToast('用户名或密码错误', 'error');
+      }
+    });
+
+    function logout() {
+      document.getElementById('loginPage').style.display = 'flex';
+      document.getElementById('mainApp').style.display = 'none';
+      showToast('已退出登录', 'info');
+    }
+
+    function showMainApp() {
+      document.getElementById('loginPage').style.display = 'none';
+      document.getElementById('mainApp').style.display = 'block';
+      loadAllData();
+    }
+
+    function showPage(pageName) {
+      document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+      document.getElementById(`page-${pageName}`).style.display = 'block';
+      document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+      event.target.closest('.menu-item').classList.add('active');
+      
+      if (pageName === 'dashboard') initDashboard();
+      if (pageName === 'members') renderMembers();
+      if (pageName === 'courses') renderCourses();
+      if (pageName === 'schedules') renderSchedules();
+      if (pageName === 'coaches') renderCoaches();
+      if (pageName === 'finance') renderFinance();
+      if (pageName === 'settings') renderUsers();
+    }
+
+    // Toast Notification
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast toast-${type}`;
+      toast.style.display = 'block';
+      setTimeout(() => toast.style.display = 'none', 3000);
+    }
+
+    // Modal Controls
+    function closeModal(modalId) {
+      document.getElementById(modalId).style.display = 'none';
+    }
+
+    function showMemberModal(id = null) {
+      document.getElementById('memberModal').style.display = 'flex';
+      document.getElementById('memberForm').reset();
+      document.getElementById('memberId').value = id || '';
+      document.getElementById('memberModalTitle').textContent = id ? '编辑会员' : '新增会员';
+    }
+
+    function showCourseModal(id = null) {
+      document.getElementById('courseModal').style.display = 'flex';
+      document.getElementById('courseForm').reset();
+      document.getElementById('courseId').value = id || '';
+      document.getElementById('courseModalTitle').textContent = id ? '编辑课程' : '新增课程';
+    }
+
+    function showScheduleModal() {
+      document.getElementById('scheduleModal').style.display = 'flex';
+      document.getElementById('scheduleForm').reset();
+      document.getElementById('scheduleDateInput').valueAsDate = new Date();
+      updateScheduleSelects();
+    }
+
+    function showCoachModal(id = null) {
+      document.getElementById('coachModal').style.display = 'flex';
+      document.getElementById('coachForm').reset();
+      document.getElementById('coachId').value = id || '';
+      document.getElementById('coachModalTitle').textContent = id ? '编辑教练' : '新增教练';
+    }
+
+    function showCouponModal() { showToast('优惠券功能开发中', 'info'); }
+    function showActivityModal() { showToast('活动功能开发中', 'info'); }
+    function showLeadModal() { showToast('线索功能开发中', 'info'); }
+    function showImportModal() { showToast('导入功能开发中', 'info'); }
+    function showCategoryModal() { showToast('分类管理开发中', 'info'); }
+    function showClassroomModal() { showToast('教室管理开发中', 'info'); }
+    function showUserModal() { showToast('用户管理开发中', 'info'); }
+
+    // Load All Data
+    function loadAllData() {
+      renderMembers();
+      renderCourses();
+      renderSchedules();
+      renderCoaches();
+      renderFinance();
+      renderUsers();
+      initDashboard();
+    }
+
+    // Render Functions
+    function renderMembers() {
+      const tbody = document.getElementById('membersTableBody');
+      tbody.innerHTML = membersData.map(m => `
+        <tr>
+          <td>M${String(m.id).padStart(4, '0')}</td>
+          <td><div style="display: flex; align-items: center; gap: 10px;"><div class="member-avatar">${m.name.charAt(0)}</div>${m.name}</div></td>
+          <td>${m.gender === 'male' ? '男' : '女'}</td>
+          <td>${m.phone}</td>
+          <td>${m.card_type}</td>
+          <td>${m.remaining_classes}节</td>
+          <td>${m.end_date}</td>
+          <td><span class="tag ${m.status === 'active' ? 'tag-success' : m.status === 'expiring' ? 'tag-warning' : 'tag-error'}">${m.status === 'active' ? '正常' : m.status === 'expiring' ? '即将到期' : '已过期'}</span></td>
+          <td>
+            <div class="table-actions">
+              <button class="btn btn-small btn-warning" onclick="editMember(${m.id})">编辑</button>
+              <button class="btn btn-small btn-danger" onclick="deleteMember(${m.id})">删除</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+      document.getElementById('membersTotal').textContent = membersData.length;
+    }
+
+    function renderCourses() {
+      const tbody = document.getElementById('coursesTableBody');
+      tbody.innerHTML = coursesData.map(c => `
+        <tr>
+          <td>${c.name}</td>
+          <td>${c.category}</td>
+          <td><span class="tag tag-info">${c.type === 'group' ? '团课' : c.type === 'private' ? '私教' : '培训'}</span></td>
+          <td>${c.duration}分钟</td>
+          <td>¥${c.price}</td>
+          <td>${c.max_participants}人</td>
+          <td>${c.booked}/${c.max_participants}</td>
+          <td>
+            <div class="table-actions">
+              <button class="btn btn-small btn-warning" onclick="editCourse(${c.id})">编辑</button>
+              <button class="btn btn-small btn-danger" onclick="deleteCourse(${c.id})">删除</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderSchedules() {
+      const tbody = document.getElementById('schedulesTableBody');
+      tbody.innerHTML = schedulesData.map(s => `
+        <tr>
+          <td>${s.date}</td>
+          <td>${s.start_time} - ${s.end_time}</td>
+          <td>${s.course}</td>
+          <td>${s.coach}</td>
+          <td>${s.classroom}</td>
+          <td>${s.booked}/${s.capacity}</td>
+          <td><span class="tag ${s.status === 'available' ? 'tag-success' : s.status === 'full' ? 'tag-warning' : 'tag-error'}">${s.status === 'available' ? '可预约' : s.status === 'full' ? '已满' : '已结束'}</span></td>
+          <td>
+            <div class="table-actions">
+              <button class="btn btn-small btn-success" onclick="checkinSchedule(${s.id})">签到</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+      
+      // Dashboard schedule
+      const scheduleBody = document.getElementById('todayScheduleBody');
+      if (scheduleBody) {
+        scheduleBody.innerHTML = schedulesData.slice(0, 5).map(s => `
+          <tr>
+            <td>${s.start_time} - ${s.end_time}</td>
+            <td>${s.course}</td>
+            <td>${s.coach}</td>
+            <td>${s.classroom}</td>
+            <td>${s.booked}/${s.capacity}</td>
+            <td>${Math.round(s.booked/s.capacity*100)}%</td>
+            <td><button class="btn btn-small btn-success" onclick="checkinSchedule(${s.id})">签到</button></td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    function renderCoaches() {
+      const tbody = document.getElementById('coachesTableBody');
+      tbody.innerHTML = coachesData.map(c => `
+        <tr>
+          <td><div style="display: flex; align-items: center; gap: 10px;"><div class="member-avatar">${c.name.charAt(0)}</div>${c.name}</div></td>
+          <td>${c.phone}</td>
+          <td>${c.certificate}</td>
+          <td>${c.specialty}</td>
+          <td>¥${c.hourly_rate}/小时</td>
+          <td>${c.monthly_hours}节</td>
+          <td>${c.students}人</td>
+          <td>
+            <div class="table-actions">
+              <button class="btn btn-small btn-warning" onclick="editCoach(${c.id})">编辑</button>
+              <button class="btn btn-small btn-danger" onclick="deleteCoach(${c.id})">删除</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderUsers() {
+      const tbody = document.getElementById('usersTableBody');
+      tbody.innerHTML = usersData.map(u => `
+        <tr>
+          <td>${u.username}</td>
+          <td>${u.name}</td>
+          <td>${u.role}</td>
+          <td>${u.phone}</td>
+          <td><span class="tag tag-success">正常</span></td>
+          <td>
+            <div class="table-actions">
+              <button class="btn btn-small btn-warning">编辑</button>
+              <button class="btn btn-small btn-danger">删除</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+      
+      // Roles table
+      const rolesData = [
+        { name: '超级管理员', desc: '拥有系统所有权限', count: 1 },
+        { name: '店长', desc: '门店管理权限', count: 1 },
+        { name: '前台', desc: '会员服务权限', count: 1 },
+        { name: '教练', desc: '课程教学权限', count: 2 },
+        { name: '财务', desc: '财务查看权限', count: 1 }
+      ];
+      const rolesBody = document.getElementById('rolesTableBody');
+      rolesBody.innerHTML = rolesData.map(r => `
+        <tr>
+          <td>${r.name}</td>
+          <td>${r.desc}</td>
+          <td>${r.count}人</td>
+          <td><button class="btn btn-small btn-warning">编辑权限</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function renderFinance() {
+      const orders = [
+        { id: 'ORD2026051001', member: '张小明', type: '购卡', amount: 1980, pay_method: '微信支付', time: '2026-05-10 10:30', status: '已完成' },
+        { id: 'ORD2026051002', member: '李小红', type: '购课', amount: 3000, pay_method: '支付宝', time: '2026-05-10 11:20', status: '已完成' },
+        { id: 'ORD2026051003', member: '王小华', type: '续费', amount: 980, pay_method: '微信支付', time: '2026-05-10 14:15', status: '已完成' }
+      ];
+      const tbody = document.getElementById('financeTableBody');
+      tbody.innerHTML = orders.map(o => `
+        <tr>
+          <td>${o.id}</td>
+          <td>${o.member}</td>
+          <td>${o.type}</td>
+          <td>¥${o.amount}</td>
+          <td>${o.pay_method}</td>
+          <td>${o.time}</td>
+          <td><span class="tag tag-success">${o.status}</span></td>
+        </tr>
+      `).join('');
+    }
+
+    // Filter Functions
+    function filterMembers() { renderMembers(); }
+    function filterCourses(type) {
+      document.querySelectorAll('#page-courses .tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+      renderCourses();
+    }
+    function filterSchedules() { renderSchedules(); }
+    function filterBookings() {}
+    function filterLeads(status) {
+      document.querySelectorAll('#page-crm .tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+    function showFinanceTab(tab) {
+      document.querySelectorAll('#page-finance .tab').forEach(t => t.classList.remove('active'));
+      event.target.classList.add('active');
+      renderFinance();
+    }
+
+    function updateScheduleSelects() {
+      const courseSelect = document.getElementById('scheduleCourseSelect');
+      if (courseSelect) {
+        courseSelect.innerHTML = '<option value="">请选择课程</option>' + 
+          coursesData.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      }
+      const coachSelect = document.getElementById('scheduleCoachSelect');
+      if (coachSelect) {
+        coachSelect.innerHTML = '<option value="">请选择教练</option>' + 
+          coachesData.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      }
+    }
+
+    // CRUD Operations
+    document.getElementById('memberForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const id = document.getElementById('memberId').value;
+      const data = {
+        name: document.getElementById('memberName').value,
+        phone: document.getElementById('memberPhone').value,
+        gender: document.getElementById('memberGender').value,
+        birthday: document.getElementById('memberBirthday').value
+      };
+      
+      if (id) {
+        const idx = membersData.findIndex(m => m.id == id);
+        if (idx !== -1) membersData[idx] = { ...membersData[idx], ...data };
+        showToast('会员更新成功！', 'success');
+      } else {
+        data.id = membersData.length + 1;
+        data.card_type = '月卡';
+        data.remaining_classes = 30;
+        data.end_date = '2026-06-10';
+        data.status = 'active';
+        membersData.push(data);
+        showToast('会员添加成功！', 'success');
+      }
+      
+      closeModal('memberModal');
+      renderMembers();
+    });
+
+    document.getElementById('courseForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      showToast('课程保存成功！', 'success');
+      closeModal('courseModal');
+      renderCourses();
+    });
+
+    document.getElementById('coachForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      showToast('教练保存成功！', 'success');
+      closeModal('coachModal');
+      renderCoaches();
+    });
+
+    document.getElementById('scheduleForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const courseId = document.getElementById('scheduleCourseSelect').value;
+      const course = coursesData.find(c => c.id == courseId);
+      
+      const newSchedule = {
+        id: schedulesData.length + 1,
+        date: document.getElementById('scheduleDateInput').value,
+        start_time: document.getElementById('scheduleStartTime').value,
+        end_time: document.getElementById('scheduleEndTime').value,
+        course: course ? course.name : '新课程',
+        coach: coachesData.find(c => c.id == document.getElementById('scheduleCoachSelect').value)?.name || '待分配',
+        classroom: '阳光瑜伽室',
+        booked: 0,
+        capacity: course ? course.max_participants : 15,
+        status: 'available'
+      };
+      
+      schedulesData.push(newSchedule);
+      showToast('排课成功！', 'success');
+      closeModal('scheduleModal');
+      renderSchedules();
+    });
+
+    // Quick Actions
+    function checkinSchedule(id) {
+      const schedule = schedulesData.find(s => s.id === id);
+      if (schedule) {
+        schedule.booked = Math.min(schedule.booked + 1, schedule.capacity);
+        if (schedule.booked >= schedule.capacity) {
+          schedule.status = 'full';
+        }
+        renderSchedules();
+        showToast(`${schedule.course} 签到成功！`, 'success');
+      }
+    }
+
+    function deleteMember(id) {
+      if (confirm('确定要删除该会员吗？')) {
+        membersData = membersData.filter(m => m.id !== id);
+        renderMembers();
+        showToast('会员已删除', 'success');
+      }
+    }
+
+    function deleteCourse(id) {
+      if (confirm('确定要删除该课程吗？')) {
+        coursesData = coursesData.filter(c => c.id !== id);
+        renderCourses();
+        showToast('课程已删除', 'success');
+      }
+    }
+
+    function deleteCoach(id) {
+      if (confirm('确定要删除该教练吗？')) {
+        coachesData = coachesData.filter(c => c.id !== id);
+        renderCoaches();
+        showToast('教练已删除', 'success');
+      }
+    }
+
+    function editMember(id) { showMemberModal(id); }
+    function editCourse(id) { showCourseModal(id); }
+    function editCoach(id) { showCoachModal(id); }
+
+    function exportMembers() { showToast('导出功能开发中', 'info'); }
+    function saveSettings() { showToast('系统配置已保存！', 'success'); }
+
+    // Dashboard Charts
+    function initDashboard() {
+      initRevenueChart();
+      initCourseHotChart();
+      initMemberTrendChart();
+      initCoachPerformanceChart();
+      
+      document.getElementById('statMembers').textContent = membersData.length;
+      document.getElementById('statTodayBookings').textContent = schedulesData.reduce((sum, s) => sum + s.booked, 0);
+    }
+
+    function initRevenueChart() {
+      const chart = echarts.init(document.getElementById('revenueChart'));
+      chart.setOption({
+        tooltip: { trigger: 'axis' },
+        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        xAxis: { type: 'category', data: ['1月', '2月', '3月', '4月', '5月', '6月'] },
+        yAxis: { type: 'value' },
+        series: [{
+          name: '营收',
+          type: 'line',
+          smooth: true,
+          data: [28500, 32000, 27800, 35600, 31200, 28650],
+          areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(24, 144, 255, 0.3)' }, { offset: 1, color: 'rgba(24, 144, 255, 0.05)' }]) },
+          lineStyle: { color: '#1890ff', width: 3 },
+          itemStyle: { color: '#1890ff' }
+        }]
+      });
+    }
+
+    function initCourseHotChart() {
+      const chart = echarts.init(document.getElementById('courseHotChart'));
+      chart.setOption({
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        xAxis: { type: 'value' },
+        yAxis: { type: 'category', data: ['基础瑜伽', '高温瑜伽', '力量训练', '私教普拉提'] },
+        series: [{
+          type: 'bar',
+          data: [156, 120, 68, 45],
+          itemStyle: { color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [{ offset: 0, color: '#1890ff' }, { offset: 1, color: '#52c41a' }]), borderRadius: [0, 4, 4, 0] }
+        }]
+      });
+    }
+
+    function initMemberTrendChart() {
+      const chart = echarts.init(document.getElementById('memberTrendChart'));
+      chart.setOption({
+        tooltip: { trigger: 'axis' },
+        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        legend: { data: ['新增会员', '流失会员'], bottom: 0 },
+        xAxis: { type: 'category', data: ['1月', '2月', '3月', '4月', '5月', '6月'] },
+        yAxis: { type: 'value' },
+        series: [
+          { name: '新增会员', type: 'bar', data: [15, 22, 18, 25, 28, 20], itemStyle: { color: '#52c41a' } },
+          { name: '流失会员', type: 'bar', data: [3, 5, 4, 6, 4, 3], itemStyle: { color: '#ff4d4f' } }
+        ]
+      });
+    }
+
+    function initCoachPerformanceChart() {
+      const chart = echarts.init(document.getElementById('coachPerformanceChart'));
+      chart.setOption({
+        tooltip: { trigger: 'item' },
+        legend: { bottom: 0 },
+        series: [{
+          name: '教练绩效',
+          type: 'pie',
+          radius: ['40%', '70%'],
+          avoidLabelOverlap: false,
+          itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
+          label: { show: true, formatter: '{b}: {c}节' },
+          data: [
+            { value: 48, name: '李教练', itemStyle: { color: '#1890ff' } },
+            { value: 36, name: '王教练', itemStyle: { color: '#52c41a' } },
+            { value: 42, name: '张教练', itemStyle: { color: '#faad14' } }
+          ]
+        }]
+      });
+    }
+  </script>
+</body>
+</html>
