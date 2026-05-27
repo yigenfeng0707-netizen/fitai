@@ -1,0 +1,32 @@
+name: Deploy to Alibaba Cloud ECS
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to ECS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: ${{ secrets.ECS_USER }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          script: |
+            cd /root/fitai
+            git pull origin master
+
+            # Build frontend
+            cd frontend
+            npm install --registry=https://registry.npmmirror.com
+            npm run build
+            cp -r dist/* /var/www/fitai/
+
+            # Restart backend
+            cd /root/fitai
+            sudo systemctl restart fitai
+
+            echo "Deployed at $(date)"
