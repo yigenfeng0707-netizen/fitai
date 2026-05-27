@@ -1,0 +1,34 @@
+version: '2.4'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: fit-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: fituser
+      POSTGRES_PASSWORD: FitAI2026db
+      POSTGRES_DB: fit_saas
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: fit-redis
+    restart: always
+
+  backend:
+    build:
+      context: /root/fitai
+      dockerfile: Dockerfile
+    container_name: fit-backend
+    restart: always
+    env_file: /root/fitai/.env
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "80:80"
+
+volumes:
+  postgres_data:
