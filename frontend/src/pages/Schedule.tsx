@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import {
-  Button, Space, Tag, Modal, Form, Select, DatePicker, TimePicker,
+  Button, Space, Tag, Modal, Form, Input, Select, DatePicker, TimePicker,
   message, Popconfirm, Card, Row, Col, Statistic, Alert,
 } from 'antd'
 import {
@@ -297,7 +297,7 @@ const Schedule = () => {
             </Form.Item>
           </Space>
           <Form.Item name="notes" label="备注">
-            <div />
+            <Input.TextArea rows={2} placeholder="备注信息" />
           </Form.Item>
           <Form.Item>
             <Space>

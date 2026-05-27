@@ -99,7 +99,7 @@ const Cards = () => {
         </div>
 
         {tab === 'expiring' ? (
-          <Table dataSource={expiring} columns={expiringColumns} rowKey="member_id" loading={loading} size="small" />
+          <Table dataSource={expiring} columns={expiringColumns} rowKey="member_id" loading={loading} size="small" pagination={{ pageSize: 10 }} />
         ) : (
           <Table dataSource={expired} columns={expiredColumns} rowKey="id" loading={loading} size="small" pagination={{ total: expiredTotal, pageSize: 20, onChange: fetchExpired }} />
         )}

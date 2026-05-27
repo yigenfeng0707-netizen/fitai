@@ -75,7 +75,7 @@ const Coaches = () => {
     { title: '专长', dataIndex: 'specialization', key: 'specialization' },
     { title: '总课时', dataIndex: 'total_hours', key: 'total_hours', render: (v: number) => `${v}小时` },
     { title: '服务学员', dataIndex: 'total_students', key: 'total_students' },
-    { title: '评分', dataIndex: 'avg_rating', key: 'avg_rating', render: (v: number) => v.toFixed(1) },
+    { title: '评分', dataIndex: 'avg_rating', key: 'avg_rating', render: (v: number) => (v ?? 0).toFixed(1) },
     { title: '状态', dataIndex: 'is_active', key: 'is_active', render: (v: boolean) => v ? '在职' : '离职' },
     {
       title: '操作',

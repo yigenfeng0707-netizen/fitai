@@ -46,6 +46,9 @@ const Layout = () => {
   const location = useLocation()
   const [unreadCount, setUnreadCount] = useState(0)
 
+  const stored = localStorage.getItem('user')
+  const currentUser = stored ? JSON.parse(stored) : null
+
   const fetchUnread = async () => {
     try {
       const res = await notificationApi.getUnreadCount()
@@ -57,8 +60,14 @@ const Layout = () => {
 
   const handleMenuClick: MenuProps['onClick'] = (e) => { navigate(e.key) }
 
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    navigate('/login')
+  }
+
   const logoutItems: MenuProps['items'] = [
-    { key: 'logout', icon: <LogoutOutlined />, label: '退出登录' },
+    { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', onClick: handleLogout },
   ]
 
   return (
@@ -90,7 +99,7 @@ const Layout = () => {
             <Dropdown menu={{ items: logoutItems }} placement="bottomRight">
               <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                 <Avatar icon={<UserOutlined />} />
-                <span style={{ marginLeft: 8 }}>管理员</span>
+                <span style={{ marginLeft: 8 }}>{currentUser?.username || '管理员'}</span>
               </div>
             </Dropdown>
           </div>

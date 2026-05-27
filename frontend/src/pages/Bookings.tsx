@@ -116,7 +116,7 @@ const Bookings = () => {
         </Button>
       </div>
 
-      <Table columns={columns} dataSource={bookings} rowKey="id" loading={loading} />
+      <Table columns={columns} dataSource={bookings} rowKey="id" loading={loading} pagination={{ pageSize: 20, showSizeChanger: true }} />
 
       <Modal
         title="新建预约"

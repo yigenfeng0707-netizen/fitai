@@ -50,7 +50,7 @@ const PaymentResult = () => {
         {order && (
           <Descriptions column={2} bordered size="small" style={{ maxWidth: 600, margin: '0 auto' }}>
             <Descriptions.Item label="订单号">{order.order_no}</Descriptions.Item>
-            <Descriptions.Item label="金额">¥{order.actual_amount.toFixed(2)}</Descriptions.Item>
+            <Descriptions.Item label="金额">¥{(order.actual_amount ?? 0).toFixed(2)}</Descriptions.Item>
             <Descriptions.Item label="支付方式">{order.payment_method || '-'}</Descriptions.Item>
             <Descriptions.Item label="状态">
               <Tag color={statusMap[order.payment_status]?.color}>{statusMap[order.payment_status]?.text}</Tag>
@@ -94,7 +94,7 @@ const PaymentResult = () => {
       {order && (
         <Descriptions column={2} bordered size="small" style={{ maxWidth: 600, margin: '0 auto' }}>
           <Descriptions.Item label="订单号">{order.order_no}</Descriptions.Item>
-          <Descriptions.Item label="金额">¥{order.actual_amount.toFixed(2)}</Descriptions.Item>
+          <Descriptions.Item label="金额">¥{(order.actual_amount ?? 0).toFixed(2)}</Descriptions.Item>
           <Descriptions.Item label="支付方式">{order.payment_method || '-'}</Descriptions.Item>
           <Descriptions.Item label="状态">
             <Tag color={statusMap[order.payment_status]?.color}>{statusMap[order.payment_status]?.text}</Tag>

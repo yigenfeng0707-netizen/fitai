@@ -1,4 +1,4 @@
-import { Table, Button, Space, Modal, Form, Input, InputNumber, Select, message, Popconfirm, Tabs } from 'antd'
+import { Table, Button, Space, Modal, Form, Input, InputNumber, Select, DatePicker, message, Popconfirm, Tabs } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
 import { useState, useEffect } from 'react'
 import { courseApi } from '../api'
@@ -84,7 +84,12 @@ const Courses = () => {
 
   const handleScheduleSubmit = async (values: any) => {
     try {
-      await courseApi.createSchedule(values as ScheduleCreate)
+      const payload = {
+        ...values,
+        start_time: values.start_time?.toISOString(),
+        end_time: values.end_time?.toISOString(),
+      }
+      await courseApi.createSchedule(payload as ScheduleCreate)
       message.success('创建排期成功')
       setIsScheduleModalOpen(false)
       fetchSchedules()
@@ -144,7 +149,7 @@ const Courses = () => {
                     新增课程
                   </Button>
                 </div>
-                <Table columns={courseColumns} dataSource={courses} rowKey="id" loading={loading} />
+                <Table columns={courseColumns} dataSource={courses} rowKey="id" loading={loading} pagination={{ pageSize: 20, showSizeChanger: true }} />
               </>
             ),
           },
@@ -158,7 +163,7 @@ const Courses = () => {
                     新增排期
                   </Button>
                 </div>
-                <Table columns={scheduleColumns} dataSource={schedules} rowKey="id" />
+                <Table columns={scheduleColumns} dataSource={schedules} rowKey="id" pagination={{ pageSize: 20, showSizeChanger: true }} />
               </>
             ),
           },
@@ -220,10 +225,10 @@ const Courses = () => {
             </Select>
           </Form.Item>
           <Form.Item name="start_time" label="开始时间" rules={[{ required: true }]}>
-            <Input type="datetime-local" />
+            <DatePicker showTime style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item name="end_time" label="结束时间" rules={[{ required: true }]}>
-            <Input type="datetime-local" />
+            <DatePicker showTime style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item>
             <Space>

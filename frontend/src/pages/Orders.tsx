@@ -14,7 +14,7 @@ const paymentStatusMap: Record<string, { color: string; text: string }> = {
 
 const paymentMethodMap: Record<string, string> = {
   alipay: '支付宝',
-  wechat_pay: '微信支付',
+  wechat: '微信支付',
   cash: '现金',
   card: '刷卡',
   transfer: '转账',
@@ -91,8 +91,8 @@ const Orders = () => {
   const columns = [
     { title: '订单号', dataIndex: 'order_no', key: 'order_no', width: 200 },
     { title: '会员ID', dataIndex: 'member_id', key: 'member_id', width: 80 },
-    { title: '金额', dataIndex: 'amount', key: 'amount', render: (v: number) => `¥${v.toFixed(2)}` },
-    { title: '实付', dataIndex: 'actual_amount', key: 'actual_amount', render: (v: number) => `¥${v.toFixed(2)}` },
+    { title: '金额', dataIndex: 'amount', key: 'amount', render: (v: number) => `¥${(v ?? 0).toFixed(2)}` },
+    { title: '实付', dataIndex: 'actual_amount', key: 'actual_amount', render: (v: number) => `¥${(v ?? 0).toFixed(2)}` },
     {
       title: '支付方式',
       dataIndex: 'payment_method',
@@ -162,7 +162,7 @@ const Orders = () => {
           />
         </Space>
       </div>
-      <Table columns={columns} dataSource={orders} rowKey="id" loading={loading} />
+      <Table columns={columns} dataSource={orders} rowKey="id" loading={loading} pagination={{ pageSize: 20, showSizeChanger: true }} />
 
       <Modal
         title="选择支付方式"
