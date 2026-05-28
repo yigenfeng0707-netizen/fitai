@@ -51,7 +51,10 @@ class Settings(BaseSettings):
 
     WECHAT_PAY_APP_ID: str = ""
     WECHAT_PAY_MCH_ID: str = ""
-    WECHAT_PAY_API_KEY: str = ""
+    WECHAT_PAY_API_KEY: str = ""          # V2 legacy key (for refunds)
+    WECHAT_PAY_API_V3_KEY: str = ""       # V3 key (32 bytes, for notification decryption)
+    WECHAT_PAY_CERT_SERIAL_NO: str = ""   # Merchant certificate serial number
+    WECHAT_PAY_PRIVATE_KEY_PATH: str = "" # Path to apiclient_key.pem
     WECHAT_PAY_GATEWAY_URL: str = "https://api.mch.weixin.qq.com"
     WECHAT_PAY_NOTIFY_URL: str = ""
 
