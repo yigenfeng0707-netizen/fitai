@@ -1,5 +1,5 @@
 import { Form, Input, Button, Card, message, Tabs } from 'antd'
-import { UserOutlined, LockOutlined } from '@ant-design/icons'
+import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { authApi } from '../api'
 
@@ -21,9 +21,9 @@ const Login = () => {
     }
   }
 
-  const handleRegister = async (values: { username: string; password: string }) => {
+  const handleRegister = async (values: { username: string; email: string; password: string }) => {
     try {
-      await authApi.register({ username: values.username, password: values.password, role: 'receptionist' })
+      await authApi.register({ username: values.username, email: values.email, password: values.password, role: 'receptionist' })
       message.success('注册成功，请登录')
       registerForm.resetFields()
     } catch (error: any) {
@@ -51,8 +51,8 @@ const Login = () => {
               label: '登录',
               children: (
                 <Form form={loginForm} onFinish={handleLogin} layout="vertical" size="large">
-                  <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
-                    <Input prefix={<UserOutlined />} placeholder="用户名" />
+                  <Form.Item name="username" rules={[{ required: true, message: '请输入用户名或邮箱' }]}>
+                    <Input prefix={<UserOutlined />} placeholder="用户名 / 邮箱" />
                   </Form.Item>
                   <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
                     <Input.Password prefix={<LockOutlined />} placeholder="密码" />
@@ -73,6 +73,12 @@ const Login = () => {
                     { min: 3, message: '用户名至少3个字符' },
                   ]}>
                     <Input prefix={<UserOutlined />} placeholder="用户名" />
+                  </Form.Item>
+                  <Form.Item name="email" rules={[
+                    { required: true, message: '请输入邮箱' },
+                    { type: 'email', message: '请输入正确的邮箱格式' },
+                  ]}>
+                    <Input prefix={<MailOutlined />} placeholder="邮箱" />
                   </Form.Item>
                   <Form.Item name="password" rules={[
                     { required: true, message: '请输入密码' },

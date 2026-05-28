@@ -30,12 +30,31 @@ class UserCRUD:
         return result.scalar_one_or_none()
     
     @staticmethod
-    async def create(db: AsyncSession, username: str, password: str, role: str = "receptionist", organization_id: int = 1) -> User:
+    async def get_by_email(db: AsyncSession, email: str) -> Optional[User]:
+        """通过邮箱获取用户"""
+        result = await db.execute(
+            select(User).where(User.email == email)
+        )
+        return result.scalar_one_or_none()
+    
+    @staticmethod
+    async def get_by_login(db: AsyncSession, login: str) -> Optional[User]:
+        """通过用户名或邮箱获取用户"""
+        result = await db.execute(
+            select(User).where(
+                (User.username == login) | (User.email == login)
+            )
+        )
+        return result.scalar_one_or_none()
+    
+    @staticmethod
+    async def create(db: AsyncSession, username: str, email: str, password: str, role: str = "receptionist", organization_id: int = 1) -> User:
         """创建用户"""
         hashed_password = get_password_hash(password)
 
         user = User(
             username=username,
+            email=email,
             password_hash=hashed_password,
             role=role,
             organization_id=organization_id,
@@ -46,9 +65,9 @@ class UserCRUD:
         return user
     
     @staticmethod
-    async def authenticate(db: AsyncSession, username: str, password: str) -> Optional[User]:
-        """认证用户"""
-        user = await UserCRUD.get_by_username(db, username)
+    async def authenticate(db: AsyncSession, login: str, password: str) -> Optional[User]:
+        """认证用户（支持用户名或邮箱）"""
+        user = await UserCRUD.get_by_login(db, login)
         
         if not user:
             return None

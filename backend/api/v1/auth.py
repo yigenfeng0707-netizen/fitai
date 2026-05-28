@@ -33,6 +33,13 @@ async def register(
             detail="用户名已存在",
         )
 
+    existing_email = await UserCRUD.get_by_email(db, obj_in.email)
+    if existing_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="邮箱已被使用",
+        )
+
     result = await db.execute(select(Organization).limit(1))
     org = result.scalar_one_or_none()
     org_id = org.id if org else 1
@@ -40,6 +47,7 @@ async def register(
     user = await UserCRUD.create(
         db,
         username=obj_in.username,
+        email=obj_in.email,
         password=obj_in.password,
         role=obj_in.role.value,
         organization_id=org_id,
@@ -53,7 +61,7 @@ async def login(
     obj_in: UserLogin,
     db: AsyncSession = Depends(get_db)
 ):
-    """用户登录"""
+    """用户登录（支持用户名或邮箱）"""
     user = await UserCRUD.authenticate(db, obj_in.username, obj_in.password)
     
     if not user:
