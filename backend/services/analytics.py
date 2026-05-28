@@ -200,7 +200,7 @@ class AnalyticsService:
         # ========== 时段分布 ==========
         hour_rows = await db.execute(
             select(
-                func.strftime('%H', CourseSchedule.start_time).label("hour"),
+                func.to_char(CourseSchedule.start_time, 'HH24').label("hour"),
                 func.count(Booking.id).label("count"),
             )
             .join(CourseSchedule)
@@ -210,8 +210,8 @@ class AnalyticsService:
                 CourseSchedule.start_time < today_start + timedelta(days=1),
                 Booking.status != BookingStatus.CANCELLED,
             )
-            .group_by(func.strftime('%H', CourseSchedule.start_time))
-            .order_by(func.strftime('%H', CourseSchedule.start_time))
+            .group_by(func.to_char(CourseSchedule.start_time, 'HH24'))
+            .order_by(func.to_char(CourseSchedule.start_time, 'HH24'))
         )
         count_by_hour = {int(r.hour): r.count for r in hour_rows}
         hour_distribution = [
