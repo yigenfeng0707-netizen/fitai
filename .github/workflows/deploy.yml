@@ -25,8 +25,20 @@ jobs:
             npm run build
             cp -r dist/* /var/www/fitai/
 
-            # Restart backend
+            # Install backend dependencies
             cd /root/fitai
+            if [ -d "venv" ]; then
+                venv/bin/pip install -r requirements.txt --quiet
+                venv/bin/alembic upgrade head
+            elif [ -d ".venv" ]; then
+                .venv/bin/pip install -r requirements.txt --quiet
+                .venv/bin/alembic upgrade head
+            else
+                pip3 install -r requirements.txt --quiet
+                alembic upgrade head
+            fi
+
+            # Restart backend
             sudo systemctl restart fitai
 
             echo "Deployed at $(date)"
