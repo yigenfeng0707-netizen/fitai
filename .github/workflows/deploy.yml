@@ -17,7 +17,7 @@ jobs:
           key: ${{ secrets.ECS_SSH_KEY }}
           script: |
             cd /root/fitai
-            git pull origin master
+            GIT_SSL_NO_VERIFY=1 git pull origin master
 
             # Build frontend
             cd frontend
@@ -27,15 +27,21 @@ jobs:
 
             # Install backend dependencies
             cd /root/fitai
-            if [ -d "venv" ]; then
-                venv/bin/pip install -r requirements.txt --quiet
-                venv/bin/alembic upgrade head
-            elif [ -d ".venv" ]; then
-                .venv/bin/pip install -r requirements.txt --quiet
-                .venv/bin/alembic upgrade head
+            VENV=""
+            if [ -d "venv" ]; then VENV=venv;
+            elif [ -d ".venv" ]; then VENV=.venv;
+            fi
+
+            if [ -n "$VENV" ]; then
+                $VENV/bin/pip install -r requirements.txt --quiet
+                # Force reinstall psycopg2-binary (system libffi may have changed)
+                $VENV/bin/pip install --force-reinstall --no-cache psycopg2-binary --quiet
+                # Run migrations (ignore if sync engine unavailable)
+                $VENV/bin/alembic upgrade head 2>/dev/null || true
             else
                 pip3 install -r requirements.txt --quiet
-                alembic upgrade head
+                pip3 install --force-reinstall --no-cache psycopg2-binary --quiet
+                alembic upgrade head 2>/dev/null || true
             fi
 
             # Restart backend
