@@ -18,10 +18,12 @@ import {
   DownloadOutlined,
   SettingOutlined,
   ThunderboltOutlined,
+  FireOutlined,
 } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { notificationApi } from '../api'
+import '../styles/theme.css'
 
 const { Header, Sider, Content } = AntLayout
 
@@ -34,7 +36,7 @@ const menuItems: MenuProps['items'] = [
   { key: '/orders', icon: <DollarOutlined />, label: '订单管理' },
   { key: '/subscriptions', icon: <CreditCardOutlined />, label: '订阅管理' },
   { key: '/leads', icon: <AuditOutlined />, label: '潜客管理' },
-  { key: '/campaigns', icon: <AuditOutlined />, label: '营销活动' },
+  { key: '/campaigns', icon: <FireOutlined />, label: '营销活动' },
   { key: '/automations', icon: <ThunderboltOutlined />, label: '营销自动化' },
   { key: '/schedules', icon: <TableOutlined />, label: '排课日历' },
   { key: '/checkin', icon: <CheckCircleOutlined />, label: '签到中心' },
@@ -74,41 +76,94 @@ const Layout = () => {
   ]
 
   return (
-    <AntLayout style={{ minHeight: '100vh' }}>
-      <Sider width={200}>
+    <AntLayout style={{ minHeight: '100vh', background: 'var(--bg-main)' }}>
+      <Sider width={220} style={{ background: 'var(--sidebar-gradient)' }}>
         <div style={{
-          height: 64, margin: 16,
-          background: 'rgba(255, 255, 255, 0.2)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: 'white', fontWeight: 'bold',
+          height: 64,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
         }}>
-          健身管理系统
+          <div style={{
+            width: 36, height: 36, borderRadius: 10,
+            background: 'linear-gradient(135deg, #a855f7, #6366f1)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontWeight: 900, color: '#fff', fontSize: 16,
+            boxShadow: '0 4px 12px rgba(168, 85, 247, 0.4)',
+          }}>F</div>
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: 17, letterSpacing: 1 }}>FitAI</span>
         </div>
-        <Menu theme="dark" mode="inline" selectedKeys={[location.pathname]} items={menuItems} onClick={handleMenuClick} />
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={[location.pathname]}
+          items={menuItems}
+          onClick={handleMenuClick}
+          style={{
+            borderRight: 'none',
+            paddingLeft: 8,
+            paddingRight: 8,
+          }}
+        />
       </Sider>
-      <AntLayout>
+      <AntLayout style={{ background: 'transparent' }}>
         <Header style={{
-          padding: '0 24px', background: '#fff',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 32px',
+          background: 'var(--glass-bg)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(139, 92, 246, 0.08)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
         }}>
-          <h2 style={{ margin: 0 }}>健身瑜伽教培管理系统</h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div>
+            <h2 style={{
+              margin: 0, fontSize: 18, fontWeight: 700,
+              background: 'linear-gradient(135deg, #4c1d95, #6366f1)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}>FitAI 智能管理</h2>
+            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>健身瑜伽教培 SaaS 平台</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
             <Badge count={unreadCount} overflowCount={99} size="small">
               <BellOutlined
-                style={{ fontSize: 20, cursor: 'pointer' }}
+                style={{ fontSize: 20, cursor: 'pointer', color: 'var(--text-secondary)' }}
                 onClick={() => navigate('/notifications')}
               />
             </Badge>
             <Dropdown menu={{ items: logoutItems }} placement="bottomRight">
-              <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
-                <Avatar icon={<UserOutlined />} />
-                <span style={{ marginLeft: 8 }}>{currentUser?.username || '管理员'}</span>
+              <div style={{
+                display: 'flex', alignItems: 'center', cursor: 'pointer', gap: 10,
+                padding: '4px 12px 4px 4px', borderRadius: 24,
+                background: 'rgba(139, 92, 246, 0.06)',
+              }}>
+                <Avatar
+                  style={{
+                    background: 'linear-gradient(135deg, #a855f7, #6366f1)',
+                    verticalAlign: 'middle',
+                  }}
+                  icon={<UserOutlined />}
+                />
+                <span style={{
+                  fontWeight: 500, fontSize: 14, color: 'var(--text-primary)',
+                }}>{currentUser?.username || '管理员'}</span>
               </div>
             </Dropdown>
           </div>
         </Header>
-        <Content style={{ margin: '24px 16px 0' }}>
-          <div style={{ padding: 24, background: '#fff', minHeight: 360 }}>
+        <Content style={{ margin: '20px 24px 0' }}>
+          <div style={{
+            padding: 28,
+            background: 'var(--glass-bg)',
+            backdropFilter: 'blur(12px)',
+            borderRadius: 'var(--radius-lg)',
+            minHeight: 560,
+            boxShadow: 'var(--card-shadow)',
+            animation: 'fadeInUp 0.4s ease-out',
+          }}>
             <Outlet />
           </div>
         </Content>

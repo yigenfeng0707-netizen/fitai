@@ -214,6 +214,56 @@ async def init_db():
                 await session.commit()
                 from backend.logger import logger
                 logger.info("种子数据已初始化")
+
+            # 检查是否需要种子订单/潜客/营销数据
+            from backend.models.order import Order, OrderStatus
+            from backend.models.lead import Lead, LeadSource, LeadStatus
+            from backend.models.campaign import Campaign, CampaignStatus
+
+            existing_orders = await session.execute(select(Order).limit(1))
+            if not existing_orders.scalar_one_or_none():
+                from backend.logger import logger
+                now = datetime.utcnow()
+                orders = [
+                    Order(order_no=f"ORD{now.strftime('%Y%m%d')}{str(i).zfill(4)}", member_id=i + 1,
+                          amount=[12800, 3200, 1500, 5000, 4800][i], discount=0,
+                          actual_amount=[12800, 3200, 1500, 5000, 4800][i],
+                          payment_method="wechat", payment_status=OrderStatus.PAID,
+                          product_type="card", subject=["年卡", "月卡", "次卡", "储值卡", "季卡"][i],
+                          paid_at=now - timedelta(days=[90, 30, 15, 60, 45][i]),
+                          created_at=now - timedelta(days=[90, 30, 15, 60, 45][i]),
+                          organization_id=org.id) for i in range(5)]
+                for o in orders:
+                    session.add(o)
+
+                leads_data = [
+                    Lead(name="陈六", phone="13700000001", source=LeadSource.VISIT, status=LeadStatus.CONTACTED,
+                         intent="yoga", expected_budget=5000, notes="路过咨询", organization_id=org.id),
+                    Lead(name="林七", phone="13700000002", source=LeadSource.SOCIAL, status=LeadStatus.NEW,
+                         intent="fitness", expected_budget=3000, organization_id=org.id),
+                    Lead(name="黄八", phone="13700000003", source=LeadSource.REFERRAL, status=LeadStatus.CONTACTED,
+                         intent="training", expected_budget=8000, notes="朋友推荐", organization_id=org.id),
+                ]
+                for l in leads_data:
+                    session.add(l)
+
+                campaigns_data = [
+                    Campaign(name="五一瑜伽体验营", campaign_type="promotion", status=CampaignStatus.COMPLETED,
+                             channels=["wechat", "sms"], budget=2000, actual_cost=1800,
+                             start_date=now - timedelta(days=35), end_date=now - timedelta(days=25),
+                             target_count=100, sent_count=80, converted_count=15, converted_revenue=12000,
+                             organization_id=org.id),
+                    Campaign(name="夏季会员招募", campaign_type="acquisition", status=CampaignStatus.ACTIVE,
+                             channels=["wechat", "social"], budget=5000, actual_cost=2000,
+                             start_date=now - timedelta(days=5), end_date=now + timedelta(days=25),
+                             target_count=200, sent_count=120, converted_count=8, converted_revenue=6400,
+                             organization_id=org.id),
+                ]
+                for c in campaigns_data:
+                    session.add(c)
+
+                await session.commit()
+                logger.info("种子订单/潜客/营销数据已初始化")
         except Exception:
             await session.rollback()
             raise
