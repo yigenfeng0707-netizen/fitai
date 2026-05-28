@@ -1,4 +1,4 @@
-import { Table, Button, Space, Tag, Select, message, Popconfirm, Modal, Radio } from 'antd'
+import { Table, Button, Space, Tag, Select, message, Popconfirm, Modal, Radio, QRCode } from 'antd'
 import { DollarOutlined, CloseCircleOutlined, RollbackOutlined } from '@ant-design/icons'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -28,6 +28,9 @@ const Orders = () => {
   const [payModalOpen, setPayModalOpen] = useState(false)
   const [payingOrderId, setPayingOrderId] = useState<number | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<string>('alipay')
+  const [qrcodeUrl, setQrcodeUrl] = useState<string | null>(null)
+  const [qrcodeModalOpen, setQrcodeModalOpen] = useState(false)
+  const [pollingInterval, setPollingInterval] = useState<ReturnType<typeof setInterval> | null>(null)
 
   const fetchOrders = async () => {
     setLoading(true)
@@ -52,13 +55,38 @@ const Orders = () => {
     setPayModalOpen(true)
   }
 
+  const startPolling = (orderId: number) => {
+    if (pollingInterval) clearInterval(pollingInterval)
+    const interval = setInterval(async () => {
+      try {
+        const order = await orderApi.get(orderId)
+        if (order.payment_status === 'paid') {
+          clearInterval(interval)
+          setPollingInterval(null)
+          setQrcodeModalOpen(false)
+          message.success('支付成功')
+          fetchOrders()
+          navigate(`/orders/${orderId}/result?status=success&trade_no=${order.transaction_id || ''}`)
+        }
+      } catch { /* ignore */ }
+    }, 3000)
+    setPollingInterval(interval)
+  }
+
   const handlePayConfirm = async () => {
     if (!payingOrderId) return
     try {
       const res = await orderApi.pay(payingOrderId, paymentMethod)
       setPayModalOpen(false)
       if (res.success) {
-        navigate(`/orders/${payingOrderId}/result?status=success&trade_no=${res.data?.trade_no || ''}`)
+        if (paymentMethod === 'wechat' && res.data?.code_url) {
+          setQrcodeUrl(res.data.code_url)
+          setQrcodeModalOpen(true)
+          startPolling(payingOrderId)
+        } else {
+          const tradeNo = res.data?.trade_no || ''
+          navigate(`/orders/${payingOrderId}/result?status=success&trade_no=${tradeNo}`)
+        }
       } else {
         navigate(`/orders/${payingOrderId}/result?status=fail`)
       }
@@ -66,6 +94,15 @@ const Orders = () => {
       message.error('支付失败')
       setPayModalOpen(false)
     }
+  }
+
+  const handleQrcodeClose = () => {
+    if (pollingInterval) {
+      clearInterval(pollingInterval)
+      setPollingInterval(null)
+    }
+    setQrcodeModalOpen(false)
+    setQrcodeUrl(null)
   }
 
   const handleCancel = async (id: number) => {
@@ -177,6 +214,32 @@ const Orders = () => {
             <Radio value="wechat">微信支付</Radio>
           </Space>
         </Radio.Group>
+      </Modal>
+
+      <Modal
+        title="微信支付"
+        open={qrcodeModalOpen}
+        onCancel={handleQrcodeClose}
+        footer={[
+          <Button key="close" onClick={handleQrcodeClose}>
+            关闭
+          </Button>,
+          <Button key="done" type="primary" onClick={() => {
+            if (pollingInterval) clearInterval(pollingInterval)
+            setPollingInterval(null)
+            setQrcodeModalOpen(false)
+            setQrcodeUrl(null)
+            fetchOrders()
+            if (payingOrderId) navigate(`/orders/${payingOrderId}/result?status=success`)
+          }}>
+            已完成支付
+          </Button>,
+        ]}
+      >
+        <div style={{ textAlign: 'center', padding: '24px 0' }}>
+          {qrcodeUrl && <QRCode value={qrcodeUrl} size={256} />}
+          <p style={{ marginTop: 16, color: '#666' }}>请使用微信扫描二维码完成支付</p>
+        </div>
       </Modal>
     </div>
   )

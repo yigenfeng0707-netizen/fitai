@@ -17,7 +17,7 @@ export const orderApi = {
     return response.data
   },
 
-  pay: async (id: number, payment_method: string = 'alipay'): Promise<{ success: boolean; message: string; data: { redirect_url?: string; trade_no?: string } }> => {
+  pay: async (id: number, payment_method: string = 'alipay'): Promise<{ success: boolean; message: string; data: { redirect_url?: string; trade_no?: string; code_url?: string; type?: string } }> => {
     const response = await client.post(`/api/v1/orders/${id}/pay?payment_method=${payment_method}`)
     return response.data
   },

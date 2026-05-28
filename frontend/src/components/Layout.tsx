@@ -33,6 +33,7 @@ const menuItems: MenuProps['items'] = [
   { key: '/orders', icon: <DollarOutlined />, label: '订单管理' },
   { key: '/subscriptions', icon: <CreditCardOutlined />, label: '订阅管理' },
   { key: '/leads', icon: <AuditOutlined />, label: '潜客管理' },
+  { key: '/campaigns', icon: <AuditOutlined />, label: '营销活动' },
   { key: '/schedules', icon: <TableOutlined />, label: '排课日历' },
   { key: '/checkin', icon: <CheckCircleOutlined />, label: '签到中心' },
   { key: '/cards', icon: <WalletOutlined />, label: '会员卡管理' },

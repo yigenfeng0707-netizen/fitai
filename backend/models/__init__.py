@@ -14,6 +14,7 @@ from .recommendation import AIRecommendation
 from .lead import Lead, LeadSource, LeadStatus, LeadIntent
 from .card_transaction import CardTransaction, TransactionType
 from .notification import Notification, NotificationType
+from .campaign import Campaign, CampaignStatus, CampaignChannel
 
 __all__ = [
     "Member", "CardType", "MemberStatus",
@@ -29,4 +30,5 @@ __all__ = [
     "Lead", "LeadSource", "LeadStatus", "LeadIntent",
     "CardTransaction", "TransactionType",
     "Notification", "NotificationType",
+    "Campaign", "CampaignStatus", "CampaignChannel",
 ]

@@ -76,6 +76,10 @@ class AlipayGateway(PaymentGateway):
 
 
 class WeChatPayGateway(PaymentGateway):
+    def __init__(self):
+        from backend.services.wechat_pay_v3 import wechat_pay_v3 as v3
+        self._v3 = v3
+
     async def create_payment(
         self,
         order_no: str,
@@ -83,11 +87,24 @@ class WeChatPayGateway(PaymentGateway):
         amount: float,
         description: Optional[str] = None,
     ) -> PaymentResult:
-        return PaymentResult(
-            success=True,
-            trade_no=f"WX{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
-            redirect_url=f"{settings.WECHAT_PAY_GATEWAY_URL}?order_no={order_no}",
-        )
+        if not self._v3._enabled:
+            return PaymentResult(
+                success=True,
+                trade_no=f"WX{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
+                message="WeChat Pay not configured — stub mode",
+            )
+        try:
+            result = await self._v3.create_native_payment(
+                order_no, subject, amount, description or "",
+            )
+            return PaymentResult(
+                success=True,
+                trade_no=order_no,
+                redirect_url=result.get("code_url", ""),
+                raw={"code_url": result.get("code_url", ""), "type": "native"},
+            )
+        except Exception as e:
+            return PaymentResult(success=False, message=str(e))
 
     async def verify_notification(self, data: dict) -> dict:
         if not data.get("order_no") or not data.get("trade_no"):
@@ -100,10 +117,30 @@ class WeChatPayGateway(PaymentGateway):
         amount: float,
         reason: Optional[str] = None,
     ) -> PaymentResult:
-        return PaymentResult(success=True, trade_no=f"REF{order_no}")
+        if not self._v3._enabled:
+            return PaymentResult(success=True, trade_no=f"REF{order_no}")
+        try:
+            result = await self._v3.refund(order_no, amount, reason or "")
+            return PaymentResult(
+                success=True,
+                trade_no=result.get("refund_id", ""),
+                raw=result,
+            )
+        except Exception as e:
+            return PaymentResult(success=False, message=str(e))
 
     async def query(self, order_no: str) -> PaymentResult:
-        return PaymentResult(success=True, trade_no=order_no)
+        if not self._v3._enabled:
+            return PaymentResult(success=True, trade_no=order_no)
+        try:
+            result = await self._v3.query_order(order_no)
+            return PaymentResult(
+                success=result.get("trade_state") == "SUCCESS",
+                trade_no=result.get("transaction_id", ""),
+                raw=result,
+            )
+        except Exception as e:
+            return PaymentResult(success=False, message=str(e))
 
 
 class PaymentService:

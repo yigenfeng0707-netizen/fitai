@@ -98,14 +98,22 @@ async def pay_order(
     )
 
     if result.success and result.trade_no:
-        await OrderService.pay(db, order, payment_method, result.trade_no)
-        from backend.services.audit import AuditService
-        await AuditService.log(db, action="pay", resource="order", resource_id=order.id, detail=f"订单 {order.order_no} 支付 {order.actual_amount}元", user_id=current_user.id, organization_id=current_user.organization_id)
+        is_stub = result.raw and result.raw.get("type") == "native"
+        if not is_stub or payment_method != "wechat":
+            await OrderService.pay(db, order, payment_method, result.trade_no)
+            from backend.services.audit import AuditService
+            await AuditService.log(db, action="pay", resource="order", resource_id=order.id, detail=f"订单 {order.order_no} 支付 {order.actual_amount}元", user_id=current_user.id, organization_id=current_user.organization_id)
+
+    data: dict = {"trade_no": result.trade_no}
+    if result.redirect_url:
+        data["redirect_url"] = result.redirect_url
+    if result.raw:
+        data.update(result.raw)
 
     return BaseResponse(
         success=result.success,
         message="支付成功" if result.success else "支付失败",
-        data={"redirect_url": result.redirect_url, "trade_no": result.trade_no},
+        data=data,
     )
 
 
