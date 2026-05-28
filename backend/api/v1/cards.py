@@ -85,7 +85,7 @@ async def get_card_transactions(
     await _get_member_or_404(db, member_id, current_user.organization_id)
     from backend.crud.card_transaction import CardTransactionCRUD
     txns, total = await CardTransactionCRUD.get_member_transactions(
-        db, member_id, skip=skip, limit=limit, transaction_type=transaction_type,
+        db, member_id, current_user.organization_id, skip=skip, limit=limit, transaction_type=transaction_type,
     )
     return ListResponse(data=txns, total=total, page=skip // limit + 1, page_size=limit)
 

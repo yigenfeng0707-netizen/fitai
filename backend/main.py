@@ -14,6 +14,7 @@ from backend.database import init_db
 from backend.api.v1 import api_router
 from backend.core.permissions import setup_permissions
 from backend.logger import logger
+from jose import JWTError
 from backend.exceptions import (
     AppException,
     NotFoundError,
@@ -51,7 +52,7 @@ app = FastAPI(
 
 
 # CORS 配置
-_cors_origins = settings.CORS_ORIGINS.split(",") if settings.CORS_ORIGINS != "*" else ["*"]
+_cors_origins = [o.strip() for o in settings.CORS_ORIGINS.split(",")] if settings.CORS_ORIGINS != "*" else ["*"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
@@ -74,7 +75,7 @@ async def tenant_context_middleware(request: Request, call_next):
             payload = verify_token(token)
             if payload and "org_id" in payload:
                 request.state.organization_id = payload["org_id"]
-        except Exception:
+        except JWTError:
             pass
     response = await call_next(request)
     return response

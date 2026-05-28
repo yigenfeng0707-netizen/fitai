@@ -59,6 +59,8 @@ class AlipayGateway(PaymentGateway):
         )
 
     async def verify_notification(self, data: dict) -> dict:
+        if not data.get("order_no") or not data.get("trade_no"):
+            raise ValueError("支付通知缺少必要字段: order_no, trade_no")
         return data
 
     async def refund(
@@ -88,6 +90,8 @@ class WeChatPayGateway(PaymentGateway):
         )
 
     async def verify_notification(self, data: dict) -> dict:
+        if not data.get("order_no") or not data.get("trade_no"):
+            raise ValueError("支付通知缺少必要字段: order_no, trade_no")
         return data
 
     async def refund(

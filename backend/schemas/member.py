@@ -47,6 +47,7 @@ class MemberUpdate(BaseModel):
 class MemberResponse(MemberBase):
     """会员响应"""
     id: int
+    organization_id: int
     card_type: Optional[CardType] = None
     card_start_date: Optional[datetime] = None
     card_end_date: Optional[datetime] = None
@@ -61,5 +62,4 @@ class MemberResponse(MemberBase):
     created_at: datetime
     updated_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}

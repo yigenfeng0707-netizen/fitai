@@ -24,6 +24,7 @@ class BookingUpdate(BaseModel):
 class BookingResponse(BaseModel):
     """预约响应"""
     id: int
+    organization_id: int
     member_id: int
     schedule_id: int
     status: BookingStatus
@@ -36,8 +37,7 @@ class BookingResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class BookingCheckIn(BaseModel):

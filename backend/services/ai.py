@@ -114,14 +114,20 @@ class AIService:
         courses = courses_result.scalars().all()
 
         bookings_result = await db.execute(
-            select(Booking).where(
+            select(Booking.schedule_id)
+            .where(
                 Booking.member_id == member_id,
                 Booking.organization_id == organization_id,
             )
         )
-        booked_course_ids = {
-            b.schedule_id for b in bookings_result.scalars().all()
-        }
+        schedule_ids = {row[0] for row in bookings_result.all()}
+        if schedule_ids:
+            schedules_result = await db.execute(
+                select(CourseSchedule.course_id).where(CourseSchedule.id.in_(schedule_ids))
+            )
+            booked_course_ids = {row[0] for row in schedules_result.all()}
+        else:
+            booked_course_ids = set()
 
         for course in courses:
             score = 50.0

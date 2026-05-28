@@ -83,15 +83,17 @@ class OrderService:
         amount: float,
         reason: Optional[str] = None,
     ) -> Order:
-        gateway = payment_service.get_gateway(order.payment_method)
-        result = await gateway.refund(order.order_no, amount, reason)
-        if result.success:
-            order.refund_amount = amount
-            order.refunded_at = datetime.utcnow()
-            order.cancel_reason = reason
-            if amount >= order.actual_amount:
-                order.payment_status = OrderStatus.REFUNDED
-            await db.flush()
+        if order.payment_method and order.payment_method in ("wechat", "alipay"):
+            gateway = payment_service.get_gateway(order.payment_method)
+            result = await gateway.refund(order.order_no, amount, reason)
+            if not result.success:
+                return order
+        order.refund_amount = amount
+        order.refunded_at = datetime.utcnow()
+        order.cancel_reason = reason
+        if amount >= order.actual_amount:
+            order.payment_status = OrderStatus.REFUNDED
+        await db.flush()
         return order
 
     @staticmethod

@@ -38,7 +38,10 @@ async def get_orders(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    status_enum = OrderStatus(payment_status) if payment_status else None
+    try:
+        status_enum = OrderStatus(payment_status) if payment_status else None
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"无效的支付状态: {payment_status}")
     orders, total = await OrderService.get_list(
         db, skip=skip, limit=limit,
         member_id=member_id,
@@ -157,7 +160,10 @@ async def payment_notify(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    body = await request.json()
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="无效的请求体")
     gateway = payment_service.get_gateway(payment_method)
     data = await gateway.verify_notification(body)
     order_no = data.get("order_no", "")

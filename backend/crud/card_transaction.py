@@ -110,7 +110,7 @@ class CardTransactionCRUD:
 
         if req.new_card_type in duration_map:
             if member.card_end_date and member.card_end_date > now:
-                member.card_end_date = now + timedelta(days=duration_map[req.new_card_type])
+                member.card_end_date = member.card_end_date + timedelta(days=duration_map[req.new_card_type])
             else:
                 member.card_end_date = now + timedelta(days=duration_map[req.new_card_type])
             member.card_start_date = now
@@ -142,11 +142,15 @@ class CardTransactionCRUD:
     async def get_member_transactions(
         db: AsyncSession,
         member_id: int,
+        organization_id: int,
         skip: int = 0,
         limit: int = 20,
         transaction_type: Optional[TransactionType] = None,
     ) -> tuple[list[CardTransaction], int]:
-        query = select(CardTransaction).where(CardTransaction.member_id == member_id)
+        query = select(CardTransaction).where(
+            CardTransaction.member_id == member_id,
+            CardTransaction.organization_id == organization_id,
+        )
         if transaction_type:
             query = query.where(CardTransaction.transaction_type == transaction_type)
         query = query.order_by(CardTransaction.created_at.desc())

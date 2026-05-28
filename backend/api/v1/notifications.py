@@ -31,7 +31,7 @@ async def get_notifications(
 ):
     from backend.crud.notification import NotificationCRUD
     notifications, total = await NotificationCRUD.get_list(
-        db, current_user.id, skip=skip, limit=limit,
+        db, current_user.id, current_user.organization_id, skip=skip, limit=limit,
         is_read=is_read, notification_type=notification_type,
     )
     return ListResponse(data=notifications, total=total, page=skip // limit + 1, page_size=limit)
@@ -43,7 +43,7 @@ async def get_unread_count(
     current_user: User = Depends(get_current_user),
 ):
     from backend.crud.notification import NotificationCRUD
-    count = await NotificationCRUD.get_unread_count(db, current_user.id)
+    count = await NotificationCRUD.get_unread_count(db, current_user.id, current_user.organization_id)
     return UnreadCountResponse(count=count)
 
 
@@ -54,7 +54,7 @@ async def mark_read(
     current_user: User = Depends(get_current_user),
 ):
     from backend.crud.notification import NotificationCRUD
-    notification = await NotificationCRUD.mark_read(db, notification_id, current_user.id)
+    notification = await NotificationCRUD.mark_read(db, notification_id, current_user.id, current_user.organization_id)
     if not notification:
         raise HTTPException(status_code=404, detail="通知不存在")
     return notification
@@ -66,7 +66,7 @@ async def mark_all_read(
     current_user: User = Depends(get_current_user),
 ):
     from backend.crud.notification import NotificationCRUD
-    count = await NotificationCRUD.mark_all_read(db, current_user.id)
+    count = await NotificationCRUD.mark_all_read(db, current_user.id, current_user.organization_id)
     return BaseResponse(message=f"已标记 {count} 条通知为已读")
 
 
@@ -77,7 +77,7 @@ async def delete_notification(
     current_user: User = Depends(get_current_user),
 ):
     from backend.crud.notification import NotificationCRUD
-    deleted = await NotificationCRUD.delete(db, notification_id, current_user.id)
+    deleted = await NotificationCRUD.delete(db, notification_id, current_user.id, current_user.organization_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="通知不存在")
     return BaseResponse(message="删除成功")

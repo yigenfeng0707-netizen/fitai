@@ -47,13 +47,12 @@ class MemberCRUD:
             card_start_date = datetime.utcnow()
         elif obj_in.initial_card_type in [CardType.MONTHLY, CardType.QUARTERLY, CardType.YEARLY]:
             card_start_date = datetime.utcnow()
-            # 计算到期日
-            if obj_in.initial_card_type == CardType.MONTHLY:
-                card_end_date = datetime.utcnow().replace(day=28) + timedelta(days=4)
-            elif obj_in.initial_card_type == CardType.QUARTERLY:
-                card_end_date = datetime.utcnow().replace(day=28) + timedelta(days=4) * 3
-            else:
-                card_end_date = datetime.utcnow().replace(day=28) + timedelta(days=4) * 12
+            duration_days = {
+                CardType.MONTHLY: 30,
+                CardType.QUARTERLY: 90,
+                CardType.YEARLY: 365,
+            }
+            card_end_date = datetime.utcnow() + timedelta(days=duration_days[obj_in.initial_card_type])
         
         member = Member(
             name=obj_in.name,
@@ -122,7 +121,7 @@ class MemberCRUD:
     @staticmethod
     async def add_consumption(db: AsyncSession, member: Member, amount: float) -> Member:
         """增加消费记录"""
-        member.total_consumption += amount
+        member.total_consumption = (member.total_consumption or 0) + amount
         if member.level == 1 and member.total_consumption >= 1000:
             member.level = 2
         elif member.level == 2 and member.total_consumption >= 5000:

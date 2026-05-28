@@ -62,12 +62,16 @@ class NotificationCRUD:
     async def get_list(
         db: AsyncSession,
         user_id: int,
+        organization_id: int,
         skip: int = 0,
         limit: int = 20,
         is_read: Optional[bool] = None,
         notification_type: Optional[NotificationType] = None,
     ) -> tuple[list[Notification], int]:
-        query = select(Notification).where(Notification.user_id == user_id)
+        query = select(Notification).where(
+            Notification.user_id == user_id,
+            Notification.organization_id == organization_id,
+        )
         if is_read is not None:
             query = query.where(Notification.is_read == is_read)
         if notification_type:
@@ -81,19 +85,24 @@ class NotificationCRUD:
         return result.scalars().all(), total
 
     @staticmethod
-    async def get_unread_count(db: AsyncSession, user_id: int) -> int:
+    async def get_unread_count(db: AsyncSession, user_id: int, organization_id: int) -> int:
         result = await db.execute(
             select(func.count(Notification.id)).where(
                 Notification.user_id == user_id,
+                Notification.organization_id == organization_id,
                 Notification.is_read.is_(False),
             )
         )
         return result.scalar() or 0
 
     @staticmethod
-    async def mark_read(db: AsyncSession, notification_id: int, user_id: int) -> Optional[Notification]:
+    async def mark_read(db: AsyncSession, notification_id: int, user_id: int, organization_id: int) -> Optional[Notification]:
         result = await db.execute(
-            select(Notification).where(Notification.id == notification_id, Notification.user_id == user_id)
+            select(Notification).where(
+                Notification.id == notification_id,
+                Notification.user_id == user_id,
+                Notification.organization_id == organization_id,
+            )
         )
         notification = result.scalar_one_or_none()
         if notification and not notification.is_read:
@@ -103,19 +112,27 @@ class NotificationCRUD:
         return notification
 
     @staticmethod
-    async def mark_all_read(db: AsyncSession, user_id: int) -> int:
+    async def mark_all_read(db: AsyncSession, user_id: int, organization_id: int) -> int:
         result = await db.execute(
             update(Notification)
-            .where(Notification.user_id == user_id, Notification.is_read.is_(False))
+            .where(
+                Notification.user_id == user_id,
+                Notification.organization_id == organization_id,
+                Notification.is_read.is_(False),
+            )
             .values(is_read=True, read_at=datetime.utcnow())
         )
         await db.flush()
         return result.rowcount
 
     @staticmethod
-    async def delete(db: AsyncSession, notification_id: int, user_id: int) -> bool:
+    async def delete(db: AsyncSession, notification_id: int, user_id: int, organization_id: int) -> bool:
         result = await db.execute(
-            select(Notification).where(Notification.id == notification_id, Notification.user_id == user_id)
+            select(Notification).where(
+                Notification.id == notification_id,
+                Notification.user_id == user_id,
+                Notification.organization_id == organization_id,
+            )
         )
         notification = result.scalar_one_or_none()
         if notification:
