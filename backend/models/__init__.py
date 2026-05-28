@@ -15,6 +15,7 @@ from .lead import Lead, LeadSource, LeadStatus, LeadIntent
 from .card_transaction import CardTransaction, TransactionType
 from .notification import Notification, NotificationType
 from .campaign import Campaign, CampaignStatus, CampaignChannel
+from .automation import AutomationRule, AutomationLog, AutomationTriggerType, AutomationActionType
 
 __all__ = [
     "Member", "CardType", "MemberStatus",
@@ -31,4 +32,5 @@ __all__ = [
     "CardTransaction", "TransactionType",
     "Notification", "NotificationType",
     "Campaign", "CampaignStatus", "CampaignChannel",
+    "AutomationRule", "AutomationLog", "AutomationTriggerType", "AutomationActionType",
 ]
