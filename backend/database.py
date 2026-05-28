@@ -50,7 +50,7 @@ _async_url = _get_database_url()
 _sync_url = _get_sync_database_url()
 _is_sqlite_db = _is_sqlite(_sync_url)
 
-# 同步引擎 (用于 Alembic 迁移、脚本)
+# 同步引擎 (用于 Alembic 迁移、脚本) - 懒加载避免启动时 psycopg2 问题
 _sync_connect_args = {"check_same_thread": False} if _is_sqlite_db else {}
 _sync_pool_kwargs = (
     {"poolclass": NullPool}
@@ -61,12 +61,22 @@ _sync_pool_kwargs = (
         "max_overflow": settings.DB_MAX_OVERFLOW,
     }
 )
-engine = create_engine(
-    _sync_url,
-    echo=settings.DEBUG,
-    connect_args=_sync_connect_args,
-    **_sync_pool_kwargs,
-)
+
+def _get_sync_engine():
+    """懒加载同步引擎"""
+    return create_engine(
+        _sync_url,
+        echo=settings.DEBUG,
+        connect_args=_sync_connect_args,
+        **_sync_pool_kwargs,
+    )
+
+# 兼容旧代码直接引用 engine
+try:
+    engine = _get_sync_engine()
+except (ImportError, ModuleNotFoundError):
+    # psycopg2 不可用时返回 None，Alembic 会用自己的引擎
+    engine = None
 
 _is_async_sqlite = _is_sqlite(_async_url)
 
