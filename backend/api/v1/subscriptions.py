@@ -85,8 +85,18 @@ async def get_subscriptions(
         db, organization_id=current_user.organization_id,
         skip=skip, limit=limit,
     )
+    from sqlalchemy import inspect
+    data = []
+    for s in subs:
+        d = {}
+        for col in s.__table__.columns:
+            val = getattr(s, col.name)
+            if hasattr(val, "isoformat"):
+                val = val.isoformat()
+            d[col.name] = val
+        data.append(d)
     return ListResponse(
-        data=subs,
+        data=data,
         total=total,
         page=skip // limit + 1 if skip else 1,
         page_size=limit,
