@@ -4,12 +4,10 @@ CRUD - 课程
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import select, or_
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
 
 from backend.models.course import Course, CourseSchedule, CourseType
-from backend.models.coach import Coach
 from backend.schemas.course import CourseCreate, CourseUpdate, CourseScheduleCreate
 
 

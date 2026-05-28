@@ -65,7 +65,7 @@ class TestAnalyticsDashboard:
             "member_id": member_id,
             "schedule_id": schedule_id,
         }, headers=auth_headers)
-        booking_id = resp.json()["id"]
+        _booking_id = resp.json()["id"]
 
         # 创建订单
         resp = await client.post("/api/v1/orders/", json={
@@ -74,7 +74,7 @@ class TestAnalyticsDashboard:
             "actual_amount": 450,
             "subject": "测试订单",
         }, headers=auth_headers)
-        order_id = resp.json()["id"]
+        _order_id = resp.json()["id"]
 
         # 验证仪表盘
         resp = await client.get("/api/v1/analytics/dashboard", headers=auth_headers)

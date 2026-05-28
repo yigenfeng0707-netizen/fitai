@@ -1,22 +1,21 @@
 """
-数据库模型 - 预约
+健身预约 booking model
 """
 from datetime import datetime
 from enum import Enum
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum as SQLEnum, Boolean, Index
-from sqlalchemy.orm import relationship
-
+from sqlalchemy import Column, Integer, String, DateTime, Enum as SAEnum, ForeignKey, Index
 from backend.database_base import Base, TenantMixin
+from sqlalchemy.orm import relationship
 
 
 class BookingStatus(str, Enum):
     """预约状态"""
-    PENDING = "pending"         # 待确认
-    CONFIRMED = "confirmed"     # 已确认
-    CHECKED_IN = "checked_in"   # 已签到
-    CANCELLED = "cancelled"     # 已取消
-    NO_SHOW = "no_show"         # 爽约
-    COMPLETED = "completed"     # 已完成
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    CHECKED_IN = "checked_in"
+    CANCELLED = "cancelled"
+    NO_SHOW = "no_show"
+    COMPLETED = "completed"
 
 
 class Booking(Base, TenantMixin):
@@ -29,34 +28,28 @@ class Booking(Base, TenantMixin):
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    
-    # 关联
+
     member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
     member = relationship("Member", back_populates="bookings")
-    
+
     schedule_id = Column(Integer, ForeignKey("course_schedules.id"), nullable=False)
     schedule = relationship("CourseSchedule", back_populates="bookings")
-    
-    # 状态
-    status = Column(SQLEnum(BookingStatus), default=BookingStatus.PENDING)
-    
-    # 签到
-    check_in_time = Column(DateTime, nullable=True)  # 签到时间
-    check_in_method = Column(String(20), nullable=True)  # 签到方式: qrcode, manual
-    
-    # 取消
+
+    status = Column(SAEnum(BookingStatus), default=BookingStatus.PENDING)
+
+    check_in_time = Column(DateTime, nullable=True)
+    check_in_method = Column(String(20), nullable=True)
+
     cancelled_at = Column(DateTime, nullable=True)
     cancelled_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     cancel_reason = Column(String(200), nullable=True)
-    
-    # 备注
+
     notes = Column(String(200), nullable=True)
-    
-    # 时间
+
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
-# 反向关系
-from backend.models.course import CourseSchedule
+# 反向关系 (imported here to break circular dependency)
+from backend.models.course import CourseSchedule  # noqa: E402
 CourseSchedule.bookings = relationship("Booking", back_populates="schedule")

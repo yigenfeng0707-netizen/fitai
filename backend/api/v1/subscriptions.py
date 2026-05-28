@@ -7,7 +7,6 @@ from backend.database import get_db
 from backend.dependencies import get_current_user
 from backend.models.auth import User
 from backend.models.organization import Organization, PlanType
-from backend.models.subscription import Subscription
 from backend.schemas.common import BaseResponse, ListResponse
 from backend.services.subscription import SubscriptionService
 

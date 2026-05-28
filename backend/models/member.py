@@ -3,7 +3,7 @@
 """
 from datetime import datetime
 from enum import Enum
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Enum as SQLEnum, Text, Boolean, JSON
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Enum as SQLEnum, Text, JSON
 from sqlalchemy.orm import relationship
 
 from backend.database_base import Base, TenantMixin
@@ -59,7 +59,7 @@ class Member(Base, TenantMixin):
     notes = Column(Text, nullable=True)  # 备注
     
     # 关联
-    coach_id = Column(Integer, ForeignKey("coaches.id"), nullable=True)
+    coach_id = Column(Integer, ForeignKey("coaches.id"), nullable=True, index=True)
     coach = relationship("Coach", back_populates="members")
     
     body_test_records = relationship("BodyTestRecord", back_populates="member", order_by="BodyTestRecord.created_at.desc()")

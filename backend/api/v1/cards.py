@@ -3,7 +3,7 @@ API - 会员卡管理
 """
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.database import get_db
@@ -19,7 +19,7 @@ from backend.schemas.card_transaction import (
     ExpiringCardResponse,
 )
 from backend.schemas.member import MemberResponse
-from backend.schemas.common import BaseResponse, ListResponse
+from backend.schemas.common import ListResponse
 
 router = APIRouter()
 

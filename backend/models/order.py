@@ -42,7 +42,7 @@ class Order(Base, TenantMixin):
     
     order_no = Column(String(30), unique=True, nullable=False, index=True)
     
-    member_id = Column(Integer, ForeignKey("members.id"), nullable=False)
+    member_id = Column(Integer, ForeignKey("members.id"), nullable=False, index=True)
     member = relationship("Member", back_populates="orders")
     
     # 金额
@@ -52,7 +52,7 @@ class Order(Base, TenantMixin):
     
     # 支付
     payment_method = Column(String(20), nullable=True)
-    payment_status = Column(SQLEnum(OrderStatus), default=OrderStatus.PENDING)
+    payment_status = Column(SQLEnum(OrderStatus), default=OrderStatus.PENDING, index=True)
     transaction_id = Column(String(100), nullable=True)
     
     # 商品
@@ -61,7 +61,7 @@ class Order(Base, TenantMixin):
     subject = Column(String(200), nullable=True)
     
     # 操作人
-    operator_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    operator_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     operator = relationship("User", back_populates="orders")
     
     # 备注
@@ -75,4 +75,4 @@ class Order(Base, TenantMixin):
     # 时间
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=True)
-    paid_at = Column(DateTime, nullable=True)
+    paid_at = Column(DateTime, nullable=True, index=True)

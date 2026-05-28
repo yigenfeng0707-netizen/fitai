@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.database import get_db
 from backend.dependencies import get_current_user
-from backend.models.booking import Booking, BookingStatus
+from backend.models.booking import BookingStatus
 from backend.schemas.booking import BookingCreate, BookingUpdate, BookingResponse, BookingCheckIn
 from backend.models.auth import User
 from backend.schemas.common import BaseResponse, ListResponse
@@ -42,7 +42,7 @@ async def get_today_bookings(
     """获取今日预约"""
     from backend.crud.booking import BookingCRUD
     from datetime import datetime
-    bookings = await BookingCRUD.get_today_bookings(db, datetime.utcnow())
+    bookings = await BookingCRUD.get_today_bookings(db, datetime.utcnow(), organization_id=current_user.organization_id)
     
     return ListResponse(
         data=bookings,

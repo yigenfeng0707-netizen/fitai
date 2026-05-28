@@ -56,7 +56,7 @@ class TestCheckinCenter:
             "member_id": member_id,
             "schedule_id": schedule_id,
         }, headers=auth_headers)
-        booking_id = resp.json()["id"]
+        _booking_id = resp.json()["id"]  # noqa
 
         # 验证签到数据
         resp = await client.get("/api/v1/bookings/checkin/today", headers=auth_headers)

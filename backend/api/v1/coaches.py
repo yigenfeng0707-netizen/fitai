@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.database import get_db
 from backend.dependencies import get_current_user
-from backend.models.coach import Coach
 from backend.schemas.coach import CoachCreate, CoachUpdate, CoachResponse
 from backend.models.auth import User
 from backend.schemas.common import BaseResponse, ListResponse

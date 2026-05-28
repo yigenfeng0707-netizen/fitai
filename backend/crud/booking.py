@@ -129,7 +129,7 @@ class BookingCRUD:
         return result.scalars().all(), total
     
     @staticmethod
-    async def get_today_bookings(db: AsyncSession, date: Optional[datetime] = None) -> list[Booking]:
+    async def get_today_bookings(db: AsyncSession, date: Optional[datetime] = None, organization_id: int = 1) -> list[Booking]:
         """获取今日预约"""
         if not date:
             date = datetime.utcnow()
@@ -140,7 +140,8 @@ class BookingCRUD:
         query = select(Booking).join(CourseSchedule).where(
             CourseSchedule.start_time >= start,
             CourseSchedule.start_time <= end,
-            Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.PENDING])
+            Booking.status.in_([BookingStatus.CONFIRMED, BookingStatus.PENDING]),
+            Booking.organization_id == organization_id,
         )
         
         result = await db.execute(query.order_by(CourseSchedule.start_time))

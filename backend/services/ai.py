@@ -2,18 +2,15 @@
 AI 服务层 - 封装 AI 推理逻辑
 知识点接入 ModelScope，生产环境切换为 Aliyun 模型服务
 """
-from typing import Optional
-from sqlalchemy import select, func, case
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from backend.models.member import Member, CardType
 from backend.models.course import Course, CourseSchedule
-from backend.models.booking import Booking, BookingStatus
+from backend.models.booking import Booking
 from backend.models.body_test import BodyTestRecord
-from backend.models.recommendation import AIRecommendation
 from backend.models.order import Order, OrderStatus
-from backend.logger import logger
 
 
 class AIService:
@@ -111,7 +108,7 @@ class AIService:
         courses_result = await db.execute(
             select(Course).where(
                 Course.organization_id == organization_id,
-                Course.is_active == True,
+                Course.is_active.is_(True),
             )
         )
         courses = courses_result.scalars().all()

@@ -1,17 +1,15 @@
 """
 API - 认证
 """
-from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer
 
 from backend.dependencies import get_current_user
 from backend.crud.auth import UserCRUD
 from backend.schemas.auth import UserLogin, UserRegister, TokenResponse, UserResponse
-from backend.core.security import create_access_token, get_password_hash
+from backend.core.security import create_access_token
 from backend.database import get_db
 from backend.models.auth import User
-from backend.core.permissions import Role
 
 from sqlalchemy.ext.asyncio import AsyncSession
 

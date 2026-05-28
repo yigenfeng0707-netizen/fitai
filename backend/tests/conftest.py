@@ -4,19 +4,12 @@ from typing import AsyncGenerator
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.database import get_db
 from backend.database_base import Base
 from backend.database_test import async_engine as async_engine_test, AsyncSessionLocal as async_session_test
 from backend.main import app
-from backend.models.auth import User
-from backend.models.member import Member
-from backend.models.coach import Coach
-from backend.models.course import Course, CourseSchedule
-from backend.models.booking import Booking
-from backend.logger import logger
 
 
 @pytest.fixture(scope="session")

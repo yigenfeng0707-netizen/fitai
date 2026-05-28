@@ -1,7 +1,6 @@
 """
 API - 系统设置
 """
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func
@@ -15,7 +14,7 @@ from backend.schemas.settings import (
     OrganizationUpdate, OrganizationResponse,
     UserCreateByAdmin, UserUpdateByAdmin, UserManageResponse,
 )
-from backend.schemas.common import BaseResponse, ListResponse
+from backend.schemas.common import ListResponse
 
 router = APIRouter()
 

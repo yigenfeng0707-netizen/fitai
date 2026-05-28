@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.database import get_db
-from backend.dependencies import get_current_user, create_permission_checker
-from backend.models.member import Member, MemberStatus, CardType
+from backend.dependencies import get_current_user
+from backend.models.member import MemberStatus, CardType
 from backend.schemas.member import MemberCreate, MemberUpdate, MemberResponse
 from backend.models.auth import User
 from backend.schemas.common import BaseResponse, ListResponse
@@ -130,7 +130,7 @@ async def consume_session(
     """消费记录"""
     from backend.crud.member import MemberCRUD
     member = await MemberCRUD.get(db, member_id)
-    if not member:
+    if not member or member.organization_id != current_user.organization_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="会员不存在",

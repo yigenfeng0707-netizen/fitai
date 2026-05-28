@@ -1,7 +1,6 @@
 from datetime import datetime
 from enum import Enum
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, JSON, Enum as SQLEnum
-from sqlalchemy.orm import relationship
 
 from backend.database_base import Base, TenantMixin
 
@@ -49,7 +48,7 @@ class Lead(Base, TenantMixin):
     tags = Column(JSON, nullable=True)
     follow_up_count = Column(Integer, default=0)
     last_contacted_at = Column(DateTime, nullable=True)
-    assigned_to = Column(Integer, ForeignKey("users.id"), nullable=True)
+    assigned_to = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     converted_member_id = Column(Integer, ForeignKey("members.id"), nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)

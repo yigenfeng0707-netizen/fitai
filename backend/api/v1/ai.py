@@ -1,6 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional
 
 from backend.database import get_db
 from backend.dependencies import get_current_user
@@ -10,10 +9,9 @@ from backend.schemas.ai import (
     BodyTestCreate,
     BodyTestResponse,
     BodyTestAnalysis,
-    RecommendationResponse,
     DashboardInsights,
 )
-from backend.schemas.common import BaseResponse, ListResponse
+from backend.schemas.common import ListResponse
 from backend.services.ai import ai_service
 
 router = APIRouter()

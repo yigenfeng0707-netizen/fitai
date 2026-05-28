@@ -35,8 +35,8 @@ class CardTransaction(Base, TenantMixin):
     card_type_before = Column(String(20), nullable=True)
     card_type_after = Column(String(20), nullable=True)
     description = Column(Text, nullable=True)
-    operator_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    order_id = Column(Integer, ForeignKey("orders.id"), nullable=True)
+    operator_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     member = relationship("Member", backref="card_transactions")

@@ -6,7 +6,6 @@ from typing import Optional, Any
 
 from pydantic import BaseModel
 
-from backend.models.auth import AuditLog
 
 
 class AuditLogResponse(BaseModel):

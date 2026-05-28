@@ -85,7 +85,7 @@ class NotificationCRUD:
         result = await db.execute(
             select(func.count(Notification.id)).where(
                 Notification.user_id == user_id,
-                Notification.is_read == False,
+                Notification.is_read.is_(False),
             )
         )
         return result.scalar() or 0
@@ -106,7 +106,7 @@ class NotificationCRUD:
     async def mark_all_read(db: AsyncSession, user_id: int) -> int:
         result = await db.execute(
             update(Notification)
-            .where(Notification.user_id == user_id, Notification.is_read == False)
+            .where(Notification.user_id == user_id, Notification.is_read.is_(False))
             .values(is_read=True, read_at=datetime.utcnow())
         )
         await db.flush()

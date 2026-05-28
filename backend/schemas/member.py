@@ -3,7 +3,7 @@ Pydantic Schema - 会员
 """
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field
 
 from backend.models.member import CardType, MemberStatus
 

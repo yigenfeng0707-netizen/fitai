@@ -46,7 +46,7 @@ async def test_tenant_isolation_members(client: AsyncClient, db: AsyncSession):
 
     from backend.crud.auth import UserCRUD
     user_a = await UserCRUD.create(db, "admin_a", "pass123", "super_admin", organization_id=org_a.id)
-    user_b = await UserCRUD.create(db, "admin_b", "pass123", "super_admin", organization_id=org_b.id)
+    _user_b = await UserCRUD.create(db, "admin_b", "pass123", "super_admin", organization_id=org_b.id)
 
     from backend.models.member import Member
     member_a = Member(name="UserA", phone="13800001001", organization_id=org_a.id)

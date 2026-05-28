@@ -44,6 +44,9 @@ app = FastAPI(
     description="健身/瑜伽/教培 AI 管理系统 API",
     version="1.0.0",
     lifespan=lifespan,
+    docs_url=None if settings.APP_ENV == "production" else "/docs",
+    redoc_url=None if settings.APP_ENV == "production" else "/redoc",
+    openapi_url=None if settings.APP_ENV == "production" else "/openapi.json",
 )
 
 
@@ -52,7 +55,7 @@ _cors_origins = settings.CORS_ORIGINS.split(",") if settings.CORS_ORIGINS != "*"
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
-    allow_credentials=settings.APP_ENV != "production",
+    allow_credentials=settings.APP_ENV != "production" and settings.CORS_ORIGINS != "*",
     allow_methods=["*"],
     allow_headers=["*"],
 )

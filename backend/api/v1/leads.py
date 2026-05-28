@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database import get_db
 from backend.dependencies import get_current_user
 from backend.models.auth import User
-from backend.models.lead import Lead, LeadStatus, LeadSource
+from backend.models.lead import LeadStatus, LeadSource
 from backend.schemas.lead import LeadCreate, LeadUpdate, LeadResponse
 from backend.schemas.common import BaseResponse, ListResponse
 from backend.crud.lead import LeadCRUD

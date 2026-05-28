@@ -3,8 +3,6 @@ from enum import Enum
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, JSON
 from sqlalchemy.orm import relationship
 
-from sqlalchemy.orm import relationship
-
 from backend.database_base import Base
 
 

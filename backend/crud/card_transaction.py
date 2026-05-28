@@ -171,7 +171,7 @@ class CardTransactionCRUD:
             .where(
                 Member.organization_id == organization_id,
                 Member.status == MemberStatus.ACTIVE,
-                Member.card_end_date != None,
+                Member.card_end_date.isnot(None),
                 Member.card_end_date >= now,
                 Member.card_end_date <= deadline,
             )
@@ -204,7 +204,7 @@ class CardTransactionCRUD:
             select(Member)
             .where(
                 Member.organization_id == organization_id,
-                Member.card_end_date != None,
+                Member.card_end_date.isnot(None),
                 Member.card_end_date < now,
             )
             .order_by(Member.card_end_date.desc())

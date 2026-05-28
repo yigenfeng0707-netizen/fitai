@@ -33,7 +33,7 @@ class Coach(Base, TenantMixin):
     avg_rating = Column(Float, default=0.0)  # 平均评分
     
     # 状态
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True, index=True)
     
     # 时间
     created_at = Column(DateTime, default=datetime.utcnow)

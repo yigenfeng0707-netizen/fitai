@@ -2,7 +2,6 @@
 数据库模型 - 认证
 """
 from datetime import datetime
-from enum import Enum
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, JSON, Text
 from sqlalchemy.orm import relationship
 
@@ -24,8 +23,8 @@ class User(Base, TenantMixin):
     role = Column(String(20), nullable=False, default=Role.RECEPTIONIST)
     
     # 关联信息
-    member_id = Column(Integer, ForeignKey("members.id"), nullable=True)
-    coach_id = Column(Integer, ForeignKey("coaches.id"), nullable=True)
+    member_id = Column(Integer, ForeignKey("members.id"), nullable=True, index=True)
+    coach_id = Column(Integer, ForeignKey("coaches.id"), nullable=True, index=True)
     
     # 状态
     is_active = Column(Boolean, default=True)
@@ -48,7 +47,7 @@ class AuditLog(Base, TenantMixin):
     
     id = Column(Integer, primary_key=True, index=True)
     
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     action = Column(String(50), nullable=False)
     resource = Column(String(100), nullable=True)
     resource_id = Column(Integer, nullable=True)

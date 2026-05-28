@@ -54,22 +54,27 @@ class AnalyticsService:
         revenue_prev_month = float(prev_month_revenue_raw.scalar() or 0)
 
         # ========== 日收入趋势 (30天) ==========
+        revenue_trend_rows = await db.execute(
+            select(
+                func.date(Order.paid_at).label("date"),
+                func.coalesce(func.sum(Order.actual_amount), 0).label("revenue"),
+            )
+            .where(
+                Order.organization_id == organization_id,
+                Order.payment_status == OrderStatus.PAID,
+                Order.paid_at >= thirty_days_ago,
+                Order.paid_at < today_start + timedelta(days=1),
+            )
+            .group_by(func.date(Order.paid_at))
+            .order_by(func.date(Order.paid_at))
+        )
+        revenue_by_date = {r.date: float(r.revenue) for r in revenue_trend_rows}
         revenue_trend = []
         for i in range(29, -1, -1):
-            day = today_start - timedelta(days=i)
-            next_day = day + timedelta(days=1)
-            row = await db.execute(
-                select(func.coalesce(func.sum(Order.actual_amount), 0))
-                .where(
-                    Order.organization_id == organization_id,
-                    Order.payment_status == OrderStatus.PAID,
-                    Order.paid_at >= day,
-                    Order.paid_at < next_day,
-                )
-            )
+            day = (today_start - timedelta(days=i)).date()
             revenue_trend.append({
                 "date": day.strftime("%Y-%m-%d"),
-                "revenue": float(row.scalar() or 0),
+                "revenue": revenue_by_date.get(day, 0),
             })
 
         # ========== 会员统计 ==========
@@ -89,21 +94,26 @@ class AnalyticsService:
         new_members_month = new_members_month_raw.scalar() or 0
 
         # 日新增会员趋势
+        member_trend_rows = await db.execute(
+            select(
+                func.date(Member.created_at).label("date"),
+                func.count(Member.id).label("count"),
+            )
+            .where(
+                Member.organization_id == organization_id,
+                Member.created_at >= thirty_days_ago,
+                Member.created_at < today_start + timedelta(days=1),
+            )
+            .group_by(func.date(Member.created_at))
+            .order_by(func.date(Member.created_at))
+        )
+        member_by_date = {r.date: r.count for r in member_trend_rows}
         member_trend = []
         for i in range(29, -1, -1):
-            day = today_start - timedelta(days=i)
-            next_day = day + timedelta(days=1)
-            row = await db.execute(
-                select(func.count(Member.id))
-                .where(
-                    Member.organization_id == organization_id,
-                    Member.created_at >= day,
-                    Member.created_at < next_day,
-                )
-            )
+            day = (today_start - timedelta(days=i)).date()
             member_trend.append({
                 "date": day.strftime("%Y-%m-%d"),
-                "count": row.scalar() or 0,
+                "count": member_by_date.get(day, 0),
             })
 
         # ========== 预约/签到统计 ==========
@@ -188,24 +198,26 @@ class AnalyticsService:
         top_courses = [{"name": row[0], "booking_count": row[1]} for row in top_courses_result]
 
         # ========== 时段分布 ==========
-        hour_distribution = []
-        for h in range(6, 22):
-            hour_start = today_start.replace(hour=h)
-            hour_end = hour_start + timedelta(hours=1)
-            row = await db.execute(
-                select(func.count(Booking.id))
-                .join(CourseSchedule)
-                .where(
-                    Booking.organization_id == organization_id,
-                    CourseSchedule.start_time >= hour_start,
-                    CourseSchedule.start_time < hour_end,
-                    Booking.status != BookingStatus.CANCELLED,
-                )
+        hour_rows = await db.execute(
+            select(
+                func.strftime('%H', CourseSchedule.start_time).label("hour"),
+                func.count(Booking.id).label("count"),
             )
-            hour_distribution.append({
-                "hour": f"{h}:00",
-                "count": row.scalar() or 0,
-            })
+            .join(CourseSchedule)
+            .where(
+                Booking.organization_id == organization_id,
+                CourseSchedule.start_time >= today_start,
+                CourseSchedule.start_time < today_start + timedelta(days=1),
+                Booking.status != BookingStatus.CANCELLED,
+            )
+            .group_by(func.strftime('%H', CourseSchedule.start_time))
+            .order_by(func.strftime('%H', CourseSchedule.start_time))
+        )
+        count_by_hour = {int(r.hour): r.count for r in hour_rows}
+        hour_distribution = [
+            {"hour": f"{h}:00", "count": count_by_hour.get(h, 0)}
+            for h in range(6, 22)
+        ]
 
         # ========== 教练工作量 ==========
         coach_load_query = (

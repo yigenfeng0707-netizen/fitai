@@ -2,7 +2,7 @@ from typing import Optional
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.models.lead import Lead, LeadStatus, LeadSource, LeadIntent
+from backend.models.lead import Lead, LeadStatus, LeadSource
 from backend.schemas.lead import LeadCreate, LeadUpdate
 
 

@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from backend.database import get_db
 from backend.dependencies import get_current_user
 from backend.models.auth import User
-from backend.models.order import Order, OrderStatus
-from backend.schemas.order import OrderCreate, OrderUpdate, OrderResponse
+from backend.models.order import OrderStatus
+from backend.schemas.order import OrderCreate, OrderResponse
 from backend.schemas.common import BaseResponse, ListResponse
 from backend.services.order import OrderService
 from backend.services.payment import payment_service

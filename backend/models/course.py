@@ -40,11 +40,11 @@ class Course(Base, TenantMixin):
     package_price = Column(Float, nullable=True)  # 套餐价格
     
     # 教练
-    coach_id = Column(Integer, ForeignKey("coaches.id"), nullable=True)
+    coach_id = Column(Integer, ForeignKey("coaches.id"), nullable=True, index=True)
     coach = relationship("Coach", back_populates="courses")
     
     # 状态
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True, index=True)
     
     # 限购
     max_attendees = Column(Integer, default=10)  # 团课最大人数

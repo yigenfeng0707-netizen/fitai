@@ -1,12 +1,12 @@
 """
 Pydantic Schema - 统一导出
 """
-from .member import *
-from .course import *
-from .booking import *
-from .coach import *
-from .auth import *
-from .order import *
+from .member import MemberCreate, MemberUpdate, MemberResponse
+from .course import CourseCreate, CourseUpdate, CourseResponse
+from .booking import BookingCreate, BookingUpdate, BookingResponse
+from .coach import CoachCreate, CoachUpdate, CoachResponse
+from .auth import UserLogin, UserRegister, TokenResponse
+from .order import OrderCreate, OrderUpdate, OrderResponse
 from .common import BaseResponse, ListResponse
 
 __all__ = [

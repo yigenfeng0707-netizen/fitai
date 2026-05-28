@@ -2,10 +2,9 @@
 数据导出服务 - 生成 Excel 文件
 """
 import io
-from datetime import datetime
 
 from openpyxl import Workbook
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.member import Member, MemberStatus, CardType
@@ -154,13 +153,13 @@ class ExportService:
                     "跟进次数", "最后联系", "创建时间"]
         ws.append(headers)
 
-        for l in leads:
+        for lead in leads:
             ws.append([
-                l.id, l.name, l.phone or "",
-                l.source or "", l.status or "",
-                l.intent or "", l.expected_budget or "",
-                l.follow_up_count, l.last_contacted_at.strftime("%Y-%m-%d %H:%M") if l.last_contacted_at else "",
-                l.created_at.strftime("%Y-%m-%d %H:%M") if l.created_at else "",
+                lead.id, lead.name, lead.phone or "",
+                lead.source or "", lead.status or "",
+                lead.intent or "", lead.expected_budget or "",
+                lead.follow_up_count, lead.last_contacted_at.strftime("%Y-%m-%d %H:%M") if lead.last_contacted_at else "",
+                lead.created_at.strftime("%Y-%m-%d %H:%M") if lead.created_at else "",
             ])
 
         buf = io.BytesIO()
