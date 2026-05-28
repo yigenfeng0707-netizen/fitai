@@ -3,7 +3,7 @@ API v1 路由总览
 """
 from fastapi import APIRouter
 
-from backend.api.v1 import auth, members, courses, bookings, coaches, orders, subscriptions, ai, leads, analytics, cards, notifications, audit, export, settings, campaign
+from backend.api.v1 import auth, members, courses, bookings, coaches, orders, subscriptions, ai, leads, analytics, cards, notifications, audit, export, settings, campaign, automation
 
 api_router = APIRouter()
 
@@ -23,5 +23,6 @@ api_router.include_router(audit.router, prefix="/audit-logs", tags=["操作日�
 api_router.include_router(export.router, prefix="/export", tags=["数据导出"])
 api_router.include_router(settings.router, prefix="/settings", tags=["系统设置"])
 api_router.include_router(campaign.router, prefix="/campaigns", tags=["营销活动"])
+api_router.include_router(automation.router, prefix="/automations", tags=["营销自动化"])
 
-__all__ = ["api_router", "auth", "members", "courses", "bookings", "coaches", "orders", "subscriptions", "ai", "leads", "analytics", "cards", "notifications", "audit", "export", "settings", "campaign"]
+__all__ = ["api_router", "auth", "members", "courses", "bookings", "coaches", "orders", "subscriptions", "ai", "leads", "analytics", "cards", "notifications", "audit", "export", "settings", "campaign", "automation"]
