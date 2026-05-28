@@ -198,22 +198,22 @@ class AnalyticsService:
         top_courses = [{"name": row[0], "booking_count": row[1]} for row in top_courses_result]
 
         # ========== 时段分布 ==========
+        from sqlalchemy import text
         hour_rows = await db.execute(
-            select(
-                func.to_char(CourseSchedule.start_time, 'HH24').label("hour"),
-                func.count(Booking.id).label("count"),
-            )
-            .join(CourseSchedule)
-            .where(
-                Booking.organization_id == organization_id,
-                CourseSchedule.start_time >= today_start,
-                CourseSchedule.start_time < today_start + timedelta(days=1),
-                Booking.status != BookingStatus.CANCELLED,
-            )
-            .group_by(func.to_char(CourseSchedule.start_time, 'HH24'))
-            .order_by(func.to_char(CourseSchedule.start_time, 'HH24'))
+            text("""
+                SELECT to_char(cs.start_time, 'HH24') AS hour, count(b.id) AS count
+                FROM bookings b
+                JOIN course_schedules cs ON cs.id = b.schedule_id
+                WHERE b.organization_id = :org_id
+                  AND cs.start_time >= :start
+                  AND cs.start_time < :end
+                  AND b.status != 'CANCELLED'
+                GROUP BY to_char(cs.start_time, 'HH24')
+                ORDER BY hour
+            """),
+            {"org_id": organization_id, "start": today_start, "end": today_start + timedelta(days=1)},
         )
-        count_by_hour = {int(r.hour): r.count for r in hour_rows}
+        count_by_hour = {int(str(r[0])): int(r[1]) for r in hour_rows}
         hour_distribution = [
             {"hour": f"{h}:00", "count": count_by_hour.get(h, 0)}
             for h in range(6, 22)
