@@ -106,6 +106,74 @@ class CashGateway(PaymentGateway):
         return PaymentResult(success=True, trade_no=order_no)
 
 
+class AlipayFaceGateway(PaymentGateway):
+    """Alipay 当面付 - personal developer supported."""
+
+    def __init__(self):
+        from backend.services.alipay import alipay_client as client
+        self._client = client
+
+    async def create_payment(
+        self,
+        order_no: str,
+        subject: str,
+        amount: float,
+        description: Optional[str] = None,
+    ) -> PaymentResult:
+        if not self._client._enabled:
+            import time
+            return PaymentResult(
+                success=True,
+                trade_no=f"ALI{int(time.time())}",
+                message="Alipay not configured - stub mode",
+            )
+        try:
+            result = await self._client.create_qr_payment(order_no, subject, amount, description or "")
+            return PaymentResult(
+                success=True,
+                trade_no=order_no,
+                redirect_url=result.get("qr_code", ""),
+                raw={"qr_code": result.get("qr_code", ""), "type": "alipay_qr", "stub": result.get("stub", False)},
+            )
+        except Exception as e:
+            return PaymentResult(success=False, message=str(e))
+
+    async def verify_notification(self, data: dict) -> dict:
+        headers = data.get("headers", {})
+        body = data.get("body", "")
+        if not self._client._enabled:
+            return data
+        return self._client.verify_notification(headers, body)
+
+    async def refund(
+        self,
+        order_no: str,
+        amount: float,
+        reason: Optional[str] = None,
+    ) -> PaymentResult:
+        if not self._client._enabled:
+            import time
+            return PaymentResult(success=True, trade_no=f"ALIREF{int(time.time())}")
+        try:
+            result = await self._client.refund(order_no, amount, reason or "")
+            return PaymentResult(success=True, trade_no=result.get("trade_no", ""), raw=result)
+        except Exception as e:
+            return PaymentResult(success=False, message=str(e))
+
+    async def query(self, order_no: str) -> PaymentResult:
+        if not self._client._enabled:
+            return PaymentResult(success=True, trade_no=order_no)
+        try:
+            result = await self._client.query_order(order_no)
+            return PaymentResult(
+                success=result.get("trade_state") == "TRADE_SUCCESS",
+                trade_no=result.get("trade_no", ""),
+                raw=result,
+            )
+        except Exception as e:
+            return PaymentResult(success=False, message=str(e))
+
+
 class WeChatPayGateway(PaymentGateway):
     def __init__(self):
         from backend.services.wechat_pay_v3 import wechat_pay_v3 as v3
@@ -191,6 +259,7 @@ class PaymentService:
 
     def _register_defaults(self):
         self._gateways["alipay"] = AlipayGateway()
+        self._gateways["alipay_face"] = AlipayFaceGateway()
         self._gateways["wechat"] = WeChatPayGateway()
         self._gateways["cash"] = CashGateway()
         self._gateways["transfer"] = CashGateway()

@@ -1,8 +1,9 @@
 import { Table, Button, Space, Tag, Select, message, Popconfirm, Modal, Radio, QRCode } from 'antd'
-import { DollarOutlined, CloseCircleOutlined, RollbackOutlined } from '@ant-design/icons'
+import { DollarOutlined, CloseCircleOutlined, RollbackOutlined, DownloadOutlined } from '@ant-design/icons'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { orderApi } from '../api'
+import client from '../api/client'
 import type { Order } from '../api/types'
 
 const paymentStatusMap: Record<string, { color: string; text: string }> = {
@@ -125,6 +126,21 @@ const Orders = () => {
     }
   }
 
+  const handleDownloadReceipt = async (orderId: number, orderNo: string) => {
+    try {
+      const response = await client.get(`/api/v1/orders/${orderId}/receipt`, { responseType: 'blob' })
+      const blob = new Blob([response.data], { type: 'application/pdf' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `receipt_${orderNo}.pdf`
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch {
+      message.error('下载收据失败')
+    }
+  }
+
   const columns = [
     { title: '订单号', dataIndex: 'order_no', key: 'order_no', width: 200 },
     { title: '会员ID', dataIndex: 'member_id', key: 'member_id', width: 80 },
@@ -150,7 +166,7 @@ const Orders = () => {
     {
       title: '操作',
       key: 'actions',
-      width: 220,
+      width: 280,
       render: (_: any, record: Order) => (
         <Space>
           {record.payment_status === 'pending' && (
@@ -164,9 +180,12 @@ const Orders = () => {
             </>
           )}
           {record.payment_status === 'paid' && (
-            <Popconfirm title="确定退款?" onConfirm={() => handleRefund(record.id)}>
-              <Button size="small" icon={<RollbackOutlined />}>退款</Button>
-            </Popconfirm>
+            <>
+              <Popconfirm title="确定退款?" onConfirm={() => handleRefund(record.id)}>
+                <Button size="small" icon={<RollbackOutlined />}>退款</Button>
+              </Popconfirm>
+              <Button size="small" icon={<DownloadOutlined />} onClick={() => handleDownloadReceipt(record.id, record.order_no)}>收据</Button>
+            </>
           )}
           {record.payment_status !== 'pending' && (
             <Button size="small" onClick={() => navigate(`/orders/${record.id}/result?status=${record.payment_status}`)}>
