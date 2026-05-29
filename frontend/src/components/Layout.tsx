@@ -118,14 +118,19 @@ const Layout = () => {
           alignItems: 'center',
           justifyContent: 'space-between',
         }}>
-          <div>
+          <div style={{
+            textAlign: 'center',
+            flex: 1,
+          }}>
             <h2 style={{
-              margin: 0, fontSize: 18, fontWeight: 700,
-              background: 'linear-gradient(135deg, #4c1d95, #6366f1)',
+              margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: 2,
+              background: 'linear-gradient(135deg, #4c1d95, #6366f1, #a855f7)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
-            }}>FitAI 智能管理</h2>
-            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>健身瑜伽教培 SaaS 平台</span>
+            }}>FitAI 智能管理平台</h2>
+            <span style={{
+              fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500, letterSpacing: 1,
+            }}>健身瑜伽教培 SaaS 平台</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
             <Badge count={unreadCount} overflowCount={99} size="small">
