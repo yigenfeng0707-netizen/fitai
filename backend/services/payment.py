@@ -107,9 +107,19 @@ class WeChatPayGateway(PaymentGateway):
             return PaymentResult(success=False, message=str(e))
 
     async def verify_notification(self, data: dict) -> dict:
-        if not data.get("order_no") or not data.get("trade_no"):
-            raise ValueError("支付通知缺少必要字段: order_no, trade_no")
-        return data
+        """Verify WeChat Pay V3 notification. data should contain 'headers' and 'body'."""
+        headers = data.get("headers", {})
+        body_str = data.get("body", "")
+        if not self._v3._enabled:
+            if not data.get("order_no") or not data.get("trade_no"):
+                raise ValueError("支付通知缺少必要字段: order_no, trade_no")
+            return data
+        try:
+            return self._v3.verify_notification(headers, body_str)
+        except Exception as e:
+            from backend.logger import logger
+            logger.warning(f"WeChat Pay V3 notification verification failed: {e}")
+            raise ValueError(f"通知验签失败: {e}")
 
     async def refund(
         self,

@@ -122,3 +122,22 @@ class OrderService:
         query = query.offset(skip).limit(limit).order_by(Order.created_at.desc())
         result = await db.execute(query)
         return list(result.scalars().all()), total or 0
+
+    @staticmethod
+    async def expire_pending_orders(db: AsyncSession) -> list[Order]:
+        """Cancel orders past their expiration time."""
+        now = datetime.utcnow()
+        result = await db.execute(
+            select(Order).where(
+                Order.payment_status == OrderStatus.PENDING,
+                Order.expires_at.isnot(None),
+                Order.expires_at < now,
+            )
+        )
+        expired = list(result.scalars().all())
+        for order in expired:
+            order.payment_status = OrderStatus.CANCELLED
+            order.cancel_reason = "订单已过期"
+        if expired:
+            await db.flush()
+        return expired

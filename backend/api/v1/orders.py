@@ -168,17 +168,29 @@ async def payment_notify(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
+    body_bytes = await request.body()
+    body_str = body_bytes.decode("utf-8") if body_bytes else ""
+    headers = dict(request.headers)
+
     try:
-        body = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="无效的请求体")
-    gateway = payment_service.get_gateway(payment_method)
-    data = await gateway.verify_notification(body)
-    order_no = data.get("order_no", "")
-    transaction_id = data.get("trade_no", "")
+        data = {"headers": headers, "body": body_str}
+        gateway = payment_service.get_gateway(payment_method)
+        decrypted = await gateway.verify_notification(data)
+    except ValueError as e:
+        from backend.logger import logger
+        logger.warning(f"Payment notification verification failed: {e}")
+        return {"code": "FAIL", "message": str(e)}
+    except Exception as e:
+        from backend.logger import logger
+        logger.error(f"Payment notification error: {e}")
+        return {"code": "FAIL", "message": "Internal error"}
+
+    order_no = decrypted.get("out_trade_no", "") or decrypted.get("order_no", "")
+    transaction_id = decrypted.get("transaction_id", "") or decrypted.get("trade_no", "")
+    trade_state = decrypted.get("trade_state", "")
 
     order = await OrderService.get_by_no(db, order_no)
-    if order and order.payment_status == OrderStatus.PENDING:
+    if order and order.payment_status == OrderStatus.PENDING and trade_state == "SUCCESS":
         await OrderService.pay(db, order, payment_method, transaction_id)
 
     return {"code": "SUCCESS", "message": "OK"}

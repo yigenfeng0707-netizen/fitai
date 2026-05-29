@@ -7,26 +7,11 @@ from backend.database import get_db
 from backend.dependencies import get_current_user
 from backend.models.auth import User
 from backend.models.organization import Organization, PlanType
+from backend.models.subscription import Subscription
 from backend.schemas.common import BaseResponse, ListResponse
-from backend.services.subscription import SubscriptionService
+from backend.services.subscription import SubscriptionService, PLAN_PRICES
 
 router = APIRouter()
-
-
-class SubscriptionResponse(BaseResponse):
-    id: int
-    organization_id: int
-    plan: str
-    status: str
-    start_date: Optional[str] = None
-    end_date: Optional[str] = None
-    auto_renew: bool = False
-    amount: float = 0.0
-    actual_amount: float = 0.0
-    order_id: Optional[int] = None
-    created_at: Optional[str] = None
-
-    model_config = {"from_attributes": True}
 
 
 @router.post("/", response_model=BaseResponse, status_code=status.HTTP_201_CREATED)
@@ -74,6 +59,116 @@ async def get_active_subscription(
     )
 
 
+@router.get("/plans", response_model=BaseResponse)
+async def get_plans():
+    """Return available subscription plans and prices."""
+    return BaseResponse(data={
+        "plans": [
+            {"key": k, "name": k.capitalize(), "price": v}
+            for k, v in PLAN_PRICES.items()
+        ]
+    })
+
+
+@router.post("/{sub_id}/cancel", response_model=BaseResponse)
+async def cancel_subscription(
+    sub_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from sqlalchemy import select
+    result = await db.execute(
+        select(Subscription).where(
+            Subscription.id == sub_id,
+            Subscription.organization_id == current_user.organization_id,
+        )
+    )
+    sub = result.scalar_one_or_none()
+    if not sub:
+        raise HTTPException(status_code=404, detail="订阅不存在")
+    if sub.status != "active":
+        raise HTTPException(status_code=400, detail="只能取消活跃订阅")
+    await SubscriptionService.cancel(db, sub)
+    return BaseResponse(message="订阅已取消")
+
+
+@router.post("/{sub_id}/renew", response_model=BaseResponse)
+async def renew_subscription(
+    sub_id: int,
+    duration_months: int = Query(1, ge=1, le=12),
+    amount: float = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from sqlalchemy import select
+    result = await db.execute(
+        select(Subscription).where(
+            Subscription.id == sub_id,
+            Subscription.organization_id == current_user.organization_id,
+        )
+    )
+    sub = result.scalar_one_or_none()
+    if not sub:
+        raise HTTPException(status_code=404, detail="订阅不存在")
+    sub = await SubscriptionService.renew(db, sub, duration_months, amount)
+    return BaseResponse(
+        message="订阅已续费",
+        data={"end_date": str(sub.end_date)},
+    )
+
+
+@router.post("/{sub_id}/upgrade", response_model=BaseResponse)
+async def upgrade_subscription(
+    sub_id: int,
+    new_plan: PlanType = Query(...),
+    duration_months: int = Query(0, ge=0, le=12),
+    amount: float = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from sqlalchemy import select
+    result = await db.execute(
+        select(Subscription).where(
+            Subscription.id == sub_id,
+            Subscription.organization_id == current_user.organization_id,
+        )
+    )
+    sub = result.scalar_one_or_none()
+    if not sub:
+        raise HTTPException(status_code=404, detail="订阅不存在")
+    if sub.status != "active":
+        raise HTTPException(status_code=400, detail="只能升级活跃订阅")
+    sub = await SubscriptionService.upgrade(db, sub, new_plan, duration_months, amount)
+    return BaseResponse(
+        message=f"已升级到 {new_plan.value} 方案",
+        data={"plan": sub.plan, "end_date": str(sub.end_date)},
+    )
+
+
+@router.post("/{sub_id}/toggle-renew", response_model=BaseResponse)
+async def toggle_auto_renew(
+    sub_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from sqlalchemy import select
+    result = await db.execute(
+        select(Subscription).where(
+            Subscription.id == sub_id,
+            Subscription.organization_id == current_user.organization_id,
+        )
+    )
+    sub = result.scalar_one_or_none()
+    if not sub:
+        raise HTTPException(status_code=404, detail="订阅不存在")
+    sub.auto_renew = not sub.auto_renew
+    await db.flush()
+    return BaseResponse(
+        message=f"自动续费已{'开启' if sub.auto_renew else '关闭'}",
+        data={"auto_renew": sub.auto_renew},
+    )
+
+
 @router.get("/", response_model=ListResponse)
 async def get_subscriptions(
     skip: int = Query(0, ge=0),
@@ -85,7 +180,6 @@ async def get_subscriptions(
         db, organization_id=current_user.organization_id,
         skip=skip, limit=limit,
     )
-    from sqlalchemy import inspect
     data = []
     for s in subs:
         d = {}

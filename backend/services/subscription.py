@@ -8,6 +8,14 @@ from backend.models.organization import Organization, PlanType
 from backend.models.subscription import Subscription, SubscriptionStatus
 
 
+PLAN_PRICES = {
+    "trial": 0,
+    "basic": 99,
+    "professional": 299,
+    "enterprise": 899,
+}
+
+
 class SubscriptionService:
     @staticmethod
     async def create(
@@ -17,6 +25,7 @@ class SubscriptionService:
         duration_months: int = 1,
         amount: float = 0.0,
         order_id: Optional[int] = None,
+        auto_renew: bool = False,
     ) -> Subscription:
         now = datetime.utcnow()
         sub = Subscription(
@@ -25,10 +34,10 @@ class SubscriptionService:
             status=SubscriptionStatus.ACTIVE,
             start_date=now,
             end_date=now + timedelta(days=30 * duration_months),
-            auto_renew=False,
-            amount=amount,
+            auto_renew=auto_renew,
+            amount=amount or PLAN_PRICES.get(plan.value, 0),
             discount=0.0,
-            actual_amount=amount,
+            actual_amount=amount or PLAN_PRICES.get(plan.value, 0),
             order_id=order_id,
         )
         db.add(sub)
@@ -55,6 +64,62 @@ class SubscriptionService:
         return subscription
 
     @staticmethod
+    async def renew(
+        db: AsyncSession,
+        subscription: Subscription,
+        duration_months: int = 1,
+        amount: float = 0.0,
+        order_id: Optional[int] = None,
+    ) -> Subscription:
+        """Extend an existing subscription."""
+        base = subscription.end_date if subscription.end_date and subscription.end_date > datetime.utcnow() else datetime.utcnow()
+        subscription.end_date = base + timedelta(days=30 * duration_months)
+        subscription.amount = amount or PLAN_PRICES.get(subscription.plan, 0)
+        subscription.actual_amount = amount or PLAN_PRICES.get(subscription.plan, 0)
+        subscription.order_id = order_id
+        if subscription.status != SubscriptionStatus.ACTIVE:
+            subscription.status = SubscriptionStatus.ACTIVE
+        await db.flush()
+        return subscription
+
+    @staticmethod
+    async def upgrade(
+        db: AsyncSession,
+        subscription: Subscription,
+        new_plan: PlanType,
+        duration_months: int = 0,
+        amount: float = 0.0,
+        order_id: Optional[int] = None,
+    ) -> Subscription:
+        """Upgrade (or downgrade) subscription plan. If duration_months=0, keep remaining days."""
+        old_plan_price = PLAN_PRICES.get(subscription.plan, 0)
+        new_plan_price = amount or PLAN_PRICES.get(new_plan.value, 0)
+
+        subscription.plan = new_plan.value
+        subscription.amount = new_plan_price
+        subscription.actual_amount = new_plan_price
+        subscription.order_id = order_id
+
+        if duration_months > 0:
+            base = subscription.end_date if subscription.end_date and subscription.end_date > datetime.utcnow() else datetime.utcnow()
+            subscription.end_date = base + timedelta(days=30 * duration_months)
+
+        if subscription.status != SubscriptionStatus.ACTIVE:
+            subscription.status = SubscriptionStatus.ACTIVE
+
+        await db.flush()
+
+        org_result = await db.execute(
+            select(Organization).where(Organization.id == subscription.organization_id)
+        )
+        org = org_result.scalar_one_or_none()
+        if org:
+            org.plan = new_plan.value
+            await db.flush()
+
+        return subscription
+
+    @staticmethod
     async def check_expired(db: AsyncSession) -> list[Subscription]:
         now = datetime.utcnow()
         result = await db.execute(
@@ -65,10 +130,12 @@ class SubscriptionService:
         )
         expired = list(result.scalars().all())
         for sub in expired:
-            sub.status = SubscriptionStatus.EXPIRED
-            if not sub.auto_renew:
+            if sub.auto_renew:
+                sub.end_date = sub.end_date + timedelta(days=30)
+            else:
                 sub.status = SubscriptionStatus.EXPIRED
-        await db.flush()
+        if expired:
+            await db.flush()
         return expired
 
     @staticmethod
