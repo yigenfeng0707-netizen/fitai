@@ -23,6 +23,9 @@ def event_loop():
 async def setup_db():
     async with async_engine_test.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    # 清理速率限制状态，避免测试间干扰
+    from backend.core.rate_limiter import _requests
+    _requests.clear()
     yield
     async with async_engine_test.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
@@ -71,12 +74,13 @@ async def token(client: AsyncClient) -> str:
             await session.commit()
     await client.post("/api/v1/auth/register", json={
         "username": "testadmin",
-        "password": "testpass123",
+        "password": "Testpass123",
+        "email": "testadmin@example.com",
         "role": "super_admin",
     })
     resp = await client.post("/api/v1/auth/login", json={
         "username": "testadmin",
-        "password": "testpass123",
+        "password": "Testpass123",
     })
     return resp.json()["access_token"]
 

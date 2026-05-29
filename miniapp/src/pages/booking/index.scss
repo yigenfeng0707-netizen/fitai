@@ -1,0 +1,159 @@
+.page-booking {
+  min-height: 100vh;
+  background-color: var(--color-bg);
+}
+
+.booking-tabs {
+  display: flex;
+  flex-direction: row;
+  background-color: var(--color-card);
+  padding: 0 32px;
+  border-bottom: 1px solid var(--color-border);
+
+  &__item {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 88px;
+    position: relative;
+
+    &--active {
+      .booking-tabs__text {
+        color: var(--color-primary);
+        font-weight: 600;
+      }
+
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 4px;
+        background-color: var(--color-primary);
+        border-radius: 2px;
+      }
+    }
+  }
+
+  &__text {
+    font-size: 28px;
+    color: var(--color-text-secondary);
+  }
+}
+
+.booking-list {
+  padding: 24px 32px;
+
+  &__loading,
+  &__empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 120px 0;
+  }
+
+  &__empty-text {
+    font-size: 28px;
+    color: var(--color-text-placeholder);
+  }
+}
+
+.booking-card {
+  display: flex;
+  flex-direction: row;
+  background-color: var(--color-card);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 24px;
+
+  &__cover {
+    width: 180px;
+    height: 220px;
+    flex-shrink: 0;
+  }
+
+  &__content {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__name {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--color-text);
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 12px;
+  }
+
+  &__status {
+    padding: 4px 12px;
+    border-radius: 20px;
+    flex-shrink: 0;
+  }
+
+  &__status-text {
+    font-size: 22px;
+    font-weight: 500;
+  }
+
+  &__info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  &__coach {
+    font-size: 24px;
+    color: var(--color-text-secondary);
+  }
+
+  &__time {
+    font-size: 24px;
+    color: var(--color-primary);
+    font-weight: 500;
+  }
+
+  &__store {
+    font-size: 22px;
+    color: var(--color-text-placeholder);
+  }
+
+  &__actions {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    margin-top: 8px;
+  }
+
+  &__btn {
+    padding: 8px 24px;
+    border-radius: var(--radius-sm);
+    font-size: 24px;
+
+    &--cancel {
+      background-color: var(--color-bg);
+      color: var(--color-text-secondary);
+    }
+
+    &--checkin {
+      background-color: rgba(124, 92, 252, 0.1);
+      color: var(--color-primary);
+    }
+  }
+}

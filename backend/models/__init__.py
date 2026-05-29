@@ -16,6 +16,12 @@ from .card_transaction import CardTransaction, TransactionType
 from .notification import Notification, NotificationType
 from .campaign import Campaign, CampaignStatus, CampaignChannel
 from .coupon import Coupon, CouponUsage
+from .automation import AutomationRule, AutomationLog, AutomationTriggerType, AutomationActionType
+from .store import Store
+from .user_store import UserStore
+from .daily_stats import DailyStats
+from .member_lifecycle import MemberLifecycleEvent
+from .coach_stats import CoachDailyStats
 
 __all__ = [
     "Member", "CardType", "MemberStatus",
@@ -33,4 +39,10 @@ __all__ = [
     "Notification", "NotificationType",
     "Campaign", "CampaignStatus", "CampaignChannel",
     "Coupon", "CouponUsage",
+    "AutomationRule", "AutomationLog", "AutomationTriggerType", "AutomationActionType",
+    "Store",
+    "UserStore",
+    "DailyStats",
+    "MemberLifecycleEvent",
+    "CoachDailyStats",
 ]

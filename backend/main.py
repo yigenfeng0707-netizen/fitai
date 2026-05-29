@@ -51,15 +51,30 @@ app = FastAPI(
 )
 
 
-# CORS 配置
-_cors_origins = [o.strip() for o in settings.CORS_ORIGINS.split(",")] if settings.CORS_ORIGINS != "*" else ["*"]
+# ── CORS 配置 ──
+# 生产环境不允许使用通配符 "*"，必须在配置中指定具体域名
+_cors_origins = [o.strip() for o in settings.CORS_ORIGINS.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
-    allow_credentials=settings.APP_ENV != "production" and settings.CORS_ORIGINS != "*",
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Store-ID", "X-Api-Key"],
 )
+
+
+# ── 安全中间件（按注册顺序，后注册的先执行） ──
+from backend.core.rate_limiter import RateLimitMiddleware
+from backend.core.security_headers import SecurityHeadersMiddleware
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(SecurityHeadersMiddleware)
+
+
+# ── 自定义中间件 ──
+from backend.core.error_tracker import ErrorTrackerMiddleware
+from backend.core.request_logging import RequestLoggingMiddleware
+app.add_middleware(ErrorTrackerMiddleware)
+app.add_middleware(RequestLoggingMiddleware)
 
 
 # ── 租户上下文中间件 ──
@@ -67,6 +82,7 @@ app.add_middleware(
 @app.middleware("http")
 async def tenant_context_middleware(request: Request, call_next):
     request.state.organization_id = 1
+    request.state.store_id = None
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
         token = auth_header.removeprefix("Bearer ")
@@ -76,6 +92,13 @@ async def tenant_context_middleware(request: Request, call_next):
             if payload and "org_id" in payload:
                 request.state.organization_id = payload["org_id"]
         except JWTError:
+            pass
+    # Extract X-Store-ID
+    store_id = request.headers.get("X-Store-ID")
+    if store_id:
+        try:
+            request.state.store_id = int(store_id)
+        except (ValueError, TypeError):
             pass
     response = await call_next(request)
     return response

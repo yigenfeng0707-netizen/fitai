@@ -4,11 +4,17 @@ import pytest
 
 class TestAuditLogAPI:
     @pytest.mark.asyncio
-    async def test_empty_logs(self, client, auth_headers):
+    async def test_list_audit_logs(self, client, auth_headers):
+        """验证审计日志列表接口正常返回（注册/登录会产生初始日志）"""
         resp = await client.get("/api/v1/audit-logs/", headers=auth_headers)
         assert resp.status_code == 200
         data = resp.json()
-        assert data["data"] == []
+        # auth_headers fixture 触发了 register 和 login，会产生初始审计日志
+        assert data["total"] >= 2
+        assert len(data["data"]) >= 2
+        actions = [log["action"] for log in data["data"]]
+        assert "login" in actions
+        assert "register" in actions
 
     @pytest.mark.asyncio
     async def test_create_member_creates_log(self, client, db, auth_headers):

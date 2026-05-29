@@ -1,0 +1,90 @@
+.course-card {
+  display: flex;
+  flex-direction: row;
+  background-color: var(--color-card);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 24px;
+
+  &__cover {
+    width: 200px;
+    height: 200px;
+    flex-shrink: 0;
+  }
+
+  &__info {
+    flex: 1;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+  }
+
+  &__name {
+    font-size: 30px;
+    font-weight: 600;
+    color: var(--color-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__coach {
+    font-size: 24px;
+    color: var(--color-text-secondary);
+  }
+
+  &__time {
+    font-size: 24px;
+    color: var(--color-primary);
+    font-weight: 500;
+  }
+
+  &__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__store {
+    display: flex;
+    align-items: center;
+  }
+
+  &__store-text {
+    font-size: 22px;
+    color: var(--color-text-placeholder);
+  }
+
+  &__status {
+    padding: 4px 16px;
+    border-radius: 20px;
+    font-size: 22px;
+
+    &.available {
+      background-color: rgba(124, 92, 252, 0.1);
+    }
+
+    &.full {
+      background-color: rgba(156, 163, 175, 0.1);
+    }
+  }
+
+  &__status-text {
+    &.available {
+      color: var(--color-primary);
+    }
+
+    &.full {
+      color: var(--color-text-placeholder);
+    }
+  }
+}

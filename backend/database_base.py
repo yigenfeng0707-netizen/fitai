@@ -16,4 +16,12 @@ class TenantMixin:
 
     @declared_attr
     def organization(cls):
-        return relationship("Organization", lazy="joined")
+        return relationship("Organization", lazy="select")
+
+
+class StoreScopeMixin:
+    store_id = Column(Integer, ForeignKey("stores.id"), index=True, nullable=True)
+
+    @declared_attr
+    def store(cls):
+        return relationship("Store", lazy="select")

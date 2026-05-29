@@ -8,9 +8,9 @@ from sqlalchemy.orm import sessionmaker
 from backend.database_base import Base
 
 # SQLite 内存数据库 (测试用) - 不使用连接池
-engine = create_engine("sqlite:///./test.db", echo=False, connect_args={"check_same_thread": False})
+engine = create_engine("sqlite:///:memory:", echo=False, connect_args={"check_same_thread": False})
 
-async_engine = create_async_engine("sqlite+aiosqlite:///./test.db", echo=False)
+async_engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
 
 AsyncSessionLocal = sessionmaker(
     async_engine,

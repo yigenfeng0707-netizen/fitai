@@ -1,8 +1,8 @@
 from datetime import datetime
 from enum import Enum
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, JSON, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, JSON, Enum as SQLEnum, Index
 
-from backend.database_base import Base, TenantMixin
+from backend.database_base import Base, TenantMixin, StoreScopeMixin
 
 
 class LeadSource(str, Enum):
@@ -30,8 +30,12 @@ class LeadIntent(str, Enum):
     OTHER = "other"
 
 
-class Lead(Base, TenantMixin):
+class Lead(Base, TenantMixin, StoreScopeMixin):
     __tablename__ = "leads"
+
+    __table_args__ = (
+        Index("ix_leads_org_status_created", "organization_id", "status", "created_at"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
 

@@ -93,8 +93,10 @@ class TestCheckinCenter:
         }, headers=auth_headers)
         course_id = resp.json()["id"]
 
-        now = datetime.utcnow() + timedelta(hours=2)
-        start = now.replace(hour=14, minute=0, second=0)
+        now = datetime.utcnow()
+        start = now.replace(hour=14, minute=0, second=0, microsecond=0)
+        if start < now:
+            start = now + timedelta(minutes=5)
         end = start + timedelta(hours=1)
         resp = await client.post("/api/v1/courses/schedules/", json={
             "course_id": course_id,
@@ -144,8 +146,10 @@ class TestCheckinCenter:
         }, headers=auth_headers)
         course_id = resp.json()["id"]
 
-        now = datetime.utcnow() + timedelta(hours=3)
-        start = now.replace(hour=16, minute=0, second=0)
+        now = datetime.utcnow()
+        start = now.replace(hour=16, minute=0, second=0, microsecond=0)
+        if start < now:
+            start = now + timedelta(minutes=5)
         end = start + timedelta(minutes=30)
         resp = await client.post("/api/v1/courses/schedules/", json={
             "course_id": course_id,

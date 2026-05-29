@@ -38,9 +38,34 @@ class Settings(BaseSettings):
     CELERY_BROKER_URL: str = "redis://localhost:6379/1"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
 
+    # Notification Settings
+    NOTIFICATION_CHANNELS: str = "in_app"  # comma-separated: in_app,sms,wechat_work
+
+    # SMS Configuration
+    SMS_ENABLED: bool = False
+    SMS_PROVIDER: str = "aliyun"  # aliyun, tencent
+    SMS_ACCESS_KEY: str = ""
+    SMS_ACCESS_SECRET: str = ""
+    SMS_SIGN_NAME: str = ""
+    SMS_TEMPLATE_CODE: str = ""
+
+    # WeChat Work Configuration
+    WECHAT_WORK_ENABLED: bool = False
+    WECHAT_WORK_CORP_ID: str = ""
+    WECHAT_WORK_AGENT_ID: str = ""
+    WECHAT_WORK_SECRET: str = ""
+
     # AI (Phase 2)
     AI_PROVIDER: str = ""
     AI_API_KEY: str = ""
+
+    # 日志
+    LOG_LEVEL: str = "INFO"
+    LOG_FORMAT: str = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    LOG_DIR: str = "./logs"
+    LOG_FILE_ENABLED: bool = False
+    LOG_REQUEST_ENABLED: bool = True
+    SLOW_REQUEST_THRESHOLD: float = 5.0
 
     # Payment (Phase 1.2)
     ALIPAY_APP_ID: str = ""
@@ -74,7 +99,9 @@ class Settings(BaseSettings):
     @field_validator("CORS_ORIGINS")
     @classmethod
     def validate_cors_origins(cls, v: str) -> str:
-        return v
+        if not v or not v.strip():
+            raise ValueError("CORS_ORIGINS must not be empty")
+        return v.strip()
 
     @model_validator(mode="after")
     def validate_production_settings(self):
@@ -84,7 +111,10 @@ class Settings(BaseSettings):
             if not self.JWT_SECRET_KEY or len(self.JWT_SECRET_KEY) < 32:
                 raise ValueError("JWT_SECRET_KEY must be at least 32 characters in production")
             if self.CORS_ORIGINS == "*":
-                pass  # nginx handles CORS in production
+                raise ValueError(
+                    "CORS_ORIGINS must not be '*' in production. "
+                    "Specify allowed origins explicitly."
+                )
         return self
 
     class Config:

@@ -26,6 +26,13 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db)
 ) -> User:
     """获取当前登录用户"""
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     from backend.core.security import verify_token
     
     token = credentials.credentials

@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 from sqlalchemy import (
-    Column, Integer, String, Float, DateTime, Text, JSON, Enum as SQLEnum,
+    Column, Integer, String, Float, DateTime, Text, JSON, Enum as SQLEnum, Index,
 )
 
 from backend.database_base import Base, TenantMixin
@@ -26,6 +26,10 @@ class CampaignChannel(str, Enum):
 
 class Campaign(Base, TenantMixin):
     __tablename__ = "campaigns"
+
+    __table_args__ = (
+        Index("ix_campaigns_org_status_created", "organization_id", "status", "created_at"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
 

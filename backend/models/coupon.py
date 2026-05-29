@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, Text
+from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, Text, Index
 from backend.database_base import Base, TenantMixin
 
 
@@ -37,6 +37,10 @@ class Coupon(TenantMixin, Base):
 
 class CouponUsage(TenantMixin, Base):
     __tablename__ = "coupon_usages"
+
+    __table_args__ = (
+        Index("ix_couponusage_org_coupon_created", "organization_id", "coupon_id", "created_at"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
 

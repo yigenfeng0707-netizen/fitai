@@ -8,8 +8,11 @@ from backend.schemas.lead import LeadCreate, LeadUpdate
 
 class LeadCRUD:
     @staticmethod
-    async def get(db: AsyncSession, lead_id: int) -> Optional[Lead]:
-        result = await db.execute(select(Lead).where(Lead.id == lead_id))
+    async def get(db: AsyncSession, lead_id: int, organization_id: int = None) -> Optional[Lead]:
+        query = select(Lead).where(Lead.id == lead_id)
+        if organization_id is not None:
+            query = query.where(Lead.organization_id == organization_id)
+        result = await db.execute(query)
         return result.scalar_one_or_none()
 
     @staticmethod

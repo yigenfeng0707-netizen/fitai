@@ -1,11 +1,15 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, JSON
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, JSON, Index
 
 from backend.database_base import Base, TenantMixin
 
 
 class AIRecommendation(Base, TenantMixin):
     __tablename__ = "ai_recommendations"
+
+    __table_args__ = (
+        Index("ix_airec_org_member_created", "organization_id", "member_id", "created_at"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     recommendation_type = Column(String(50), nullable=False, index=True)

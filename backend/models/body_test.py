@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey, JSON, Text
+from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey, JSON, Text, Index
 from sqlalchemy.orm import relationship
 
 from backend.database_base import Base, TenantMixin
@@ -7,6 +7,10 @@ from backend.database_base import Base, TenantMixin
 
 class BodyTestRecord(Base, TenantMixin):
     __tablename__ = "body_test_records"
+
+    __table_args__ = (
+        Index("ix_bodytest_org_member_created", "organization_id", "member_id", "created_at"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     member_id = Column(Integer, ForeignKey("members.id"), nullable=False, index=True)

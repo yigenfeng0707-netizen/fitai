@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import Enum
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean, Index
 from sqlalchemy.orm import relationship
 
 from backend.database_base import Base
@@ -14,6 +14,11 @@ class SubscriptionStatus(str, Enum):
 
 class Subscription(Base):
     __tablename__ = "subscriptions"
+
+    __table_args__ = (
+        Index("ix_subscriptions_org", "organization_id"),
+        Index("ix_subscriptions_org_status_end", "organization_id", "status", "end_date"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
 

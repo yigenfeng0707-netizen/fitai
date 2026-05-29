@@ -1,34 +1,144 @@
-version: '2.4'
+version: '3.8'
 
 services:
+  # PostgreSQL 16
   postgres:
     image: postgres:16-alpine
-    container_name: fit-postgres
-    restart: always
     environment:
-      POSTGRES_USER: fituser
-      POSTGRES_PASSWORD: FitAI2026db
-      POSTGRES_DB: fit_saas
+      POSTGRES_DB: ${DB_NAME:-fitai}
+      POSTGRES_USER: ${DB_USER:-fitai}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-fitai_secret_2024}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fitai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2'
 
+  # Redis 7
   redis:
     image: redis:7-alpine
-    container_name: fit-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_secret_2024} --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_secret_2024}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
 
+  # Backend API
   backend:
     build:
-      context: /root/fitai
+      context: .
       dockerfile: Dockerfile
-    container_name: fit-backend
-    restart: always
-    env_file: /root/fitai/.env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-fitai}:${DB_PASSWORD:-fitai_secret_2024}@postgres:5432/${DB_NAME:-fitai}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_secret_2024}@redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production-use-openssl-rand-hex-32}
+      - ENVIRONMENT=production
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://app.fitai.com,https://admin.fitai.com}
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
+      - LOG_FILE_ENABLED=true
+      - LOG_REQUEST_ENABLED=true
+      - SLOW_REQUEST_THRESHOLD=5.0
+      - DB_POOL_SIZE=20
+      - DB_MAX_OVERFLOW=40
+    ports:
+      - "8000:8000"
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Celery Worker
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A backend.worker.celery_app worker -l info -c 4
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-fitai}:${DB_PASSWORD:-fitai_secret_2024}@postgres:5432/${DB_NAME:-fitai}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_secret_2024}@redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production-use-openssl-rand-hex-32}
+      - ENVIRONMENT=production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1'
+
+  # Celery Beat (scheduler)
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A backend.worker.celery_app beat -l info
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${DB_USER:-fitai}:${DB_PASSWORD:-fitai_secret_2024}@postgres:5432/${DB_NAME:-fitai}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_secret_2024}@redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production-use-openssl-rand-hex-32}
+      - ENVIRONMENT=production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - backend
+    restart: always
 
 volumes:
   postgres_data:
+  redis_data:
+  nginx_logs:

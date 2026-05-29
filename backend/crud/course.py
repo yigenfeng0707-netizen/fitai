@@ -15,11 +15,12 @@ class CourseCRUD:
     """课程 CRUD"""
     
     @staticmethod
-    async def get(db: AsyncSession, course_id: int) -> Optional[Course]:
+    async def get(db: AsyncSession, course_id: int, organization_id: int = None) -> Optional[Course]:
         """获取课程"""
-        result = await db.execute(
-            select(Course).where(Course.id == course_id)
-        )
+        query = select(Course).where(Course.id == course_id)
+        if organization_id is not None:
+            query = query.where(Course.organization_id == organization_id)
+        result = await db.execute(query)
         return result.scalar_one_or_none()
     
     @staticmethod

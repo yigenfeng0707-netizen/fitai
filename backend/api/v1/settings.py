@@ -75,7 +75,7 @@ async def create_user(
     if existing:
         raise HTTPException(status_code=400, detail="用户名已存在")
     user = await UserCRUD.create(
-        db, username=obj_in.username, password=obj_in.password,
+        db, username=obj_in.username, email=obj_in.email, password=obj_in.password,
         role=obj_in.role, organization_id=current_user.organization_id,
     )
     return user
@@ -90,18 +90,39 @@ async def update_user(
 ):
     from backend.crud.auth import UserCRUD
     from backend.core.security import get_password_hash
+    from backend.core.password_policy import enforce_password_policy, PasswordPolicyError
+    from backend.services.audit import AuditService
     user = await UserCRUD.get(db, user_id)
     if not user or user.organization_id != current_user.organization_id:
         raise HTTPException(status_code=404, detail="用户不存在")
 
+    changes = []
     if obj_in.role is not None:
+        changes.append(f"角色: {user.role} -> {obj_in.role}")
         user.role = obj_in.role
     if obj_in.is_active is not None:
+        changes.append(f"状态: {user.is_active} -> {obj_in.is_active}")
         user.is_active = obj_in.is_active
     if obj_in.password:
+        # 密码强度验证
+        try:
+            enforce_password_policy(obj_in.password)
+        except PasswordPolicyError as e:
+            raise HTTPException(status_code=400, detail=str(e))
         user.password_hash = get_password_hash(obj_in.password)
+        changes.append("密码已修改")
 
     await db.flush()
+
+    # 审计日志：用户信息变更（密码、权限等敏感操作）
+    if changes:
+        await AuditService.log(
+            db, action="update", resource="user", resource_id=user.id,
+            detail=f"管理员修改用户: {', '.join(changes)}",
+            user_id=current_user.id,
+            organization_id=current_user.organization_id,
+        )
+
     return user
 
 

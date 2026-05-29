@@ -59,6 +59,9 @@ _sync_pool_kwargs = (
         "poolclass": QueuePool,
         "pool_size": settings.DB_POOL_SIZE,
         "max_overflow": settings.DB_MAX_OVERFLOW,
+        "pool_pre_ping": True,
+        "pool_recycle": 3600,
+        "pool_timeout": 10,
     }
 )
 

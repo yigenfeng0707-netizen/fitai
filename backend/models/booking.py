@@ -4,7 +4,7 @@
 from datetime import datetime
 from enum import Enum
 from sqlalchemy import Column, Integer, String, DateTime, Enum as SAEnum, ForeignKey, Index
-from backend.database_base import Base, TenantMixin
+from backend.database_base import Base, TenantMixin, StoreScopeMixin
 from sqlalchemy.orm import relationship
 
 
@@ -18,11 +18,13 @@ class BookingStatus(str, Enum):
     COMPLETED = "completed"
 
 
-class Booking(Base, TenantMixin):
+class Booking(Base, TenantMixin, StoreScopeMixin):
     """预约表"""
     __tablename__ = "bookings"
 
     __table_args__ = (
+        Index("ix_bookings_org_status_created", "organization_id", "status", "created_at"),
+        Index("ix_bookings_org_member_created", "organization_id", "member_id", "created_at"),
         Index("ix_bookings_member_status", "member_id", "status"),
         Index("ix_bookings_schedule_id", "schedule_id"),
     )

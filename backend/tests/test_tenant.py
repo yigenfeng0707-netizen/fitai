@@ -10,7 +10,8 @@ from backend.core.security import create_access_token
 async def test_register_auto_assigns_org(client: AsyncClient):
     resp = await client.post("/api/v1/auth/register", json={
         "username": "user_a",
-        "password": "pass123",
+        "email": "user_a@example.com",
+        "password": "Pass1234",
         "role": "receptionist",
     })
     assert resp.status_code == 200
@@ -22,12 +23,13 @@ async def test_register_auto_assigns_org(client: AsyncClient):
 async def test_token_contains_org_id(client: AsyncClient):
     await client.post("/api/v1/auth/register", json={
         "username": "user_b",
-        "password": "pass123",
+        "email": "user_b@example.com",
+        "password": "Pass1234",
         "role": "receptionist",
     })
     resp = await client.post("/api/v1/auth/login", json={
         "username": "user_b",
-        "password": "pass123",
+        "password": "Pass1234",
     })
     assert resp.status_code == 200
     token = resp.json()["access_token"]
@@ -45,8 +47,8 @@ async def test_tenant_isolation_members(client: AsyncClient, db: AsyncSession):
     await db.flush()
 
     from backend.crud.auth import UserCRUD
-    user_a = await UserCRUD.create(db, "admin_a", "pass123", "super_admin", organization_id=org_a.id)
-    _user_b = await UserCRUD.create(db, "admin_b", "pass123", "super_admin", organization_id=org_b.id)
+    user_a = await UserCRUD.create(db, "admin_a", "admin_a@example.com", "pass123", "super_admin", organization_id=org_a.id)
+    _user_b = await UserCRUD.create(db, "admin_b", "admin_b@example.com", "pass123", "super_admin", organization_id=org_b.id)
 
     from backend.models.member import Member
     member_a = Member(name="UserA", phone="13800001001", organization_id=org_a.id)
@@ -73,7 +75,7 @@ async def test_tenant_isolation_orders(client: AsyncClient, db: AsyncSession):
     await db.flush()
 
     from backend.crud.auth import UserCRUD
-    user_a = await UserCRUD.create(db, "admin_c", "pass123", "super_admin", organization_id=org_a.id)
+    user_a = await UserCRUD.create(db, "admin_c", "admin_c@example.com", "pass123", "super_admin", organization_id=org_a.id)
 
     from backend.models.member import Member
     from backend.models.order import Order

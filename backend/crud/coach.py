@@ -14,11 +14,12 @@ class CoachCRUD:
     """教练 CRUD"""
     
     @staticmethod
-    async def get(db: AsyncSession, coach_id: int) -> Optional[Coach]:
+    async def get(db: AsyncSession, coach_id: int, organization_id: int = None) -> Optional[Coach]:
         """获取教练"""
-        result = await db.execute(
-            select(Coach).where(Coach.id == coach_id)
-        )
+        query = select(Coach).where(Coach.id == coach_id)
+        if organization_id is not None:
+            query = query.where(Coach.organization_id == organization_id)
+        result = await db.execute(query)
         return result.scalar_one_or_none()
     
     @staticmethod

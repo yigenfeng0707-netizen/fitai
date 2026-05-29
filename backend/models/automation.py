@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, JSON, ForeignKey, Enum as SAEnum
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, JSON, ForeignKey, Enum as SAEnum, Index
 from sqlalchemy.orm import relationship
 import enum
 
@@ -23,6 +23,10 @@ class AutomationActionType(str, enum.Enum):
 class AutomationRule(TenantMixin, Base):
     __tablename__ = "automation_rules"
 
+    __table_args__ = (
+        Index("ix_arules_org_trigger_active", "organization_id", "trigger_type", "is_active"),
+    )
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
@@ -41,6 +45,10 @@ class AutomationRule(TenantMixin, Base):
 
 class AutomationLog(TenantMixin, Base):
     __tablename__ = "automation_logs"
+
+    __table_args__ = (
+        Index("ix_alogs_org_rule_created", "organization_id", "rule_id", "created_at"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     rule_id = Column(Integer, ForeignKey("automation_rules.id"), nullable=False, index=True)

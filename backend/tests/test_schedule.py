@@ -175,8 +175,8 @@ class TestScheduleAPI:
         db.add_all([org_a, org_b])
         await db.flush()
 
-        user_a = await UserCRUD.create(db, "sched_admin_a", "pass123", "super_admin", organization_id=org_a.id)
-        user_b = await UserCRUD.create(db, "sched_admin_b", "pass456", "super_admin", organization_id=org_b.id)
+        user_a = await UserCRUD.create(db, "sched_admin_a", "sched_a@example.com", "pass123", "super_admin", organization_id=org_a.id)
+        user_b = await UserCRUD.create(db, "sched_admin_b", "sched_b@example.com", "pass456", "super_admin", organization_id=org_b.id)
         await db.commit()
 
         token_a = create_access_token(data={"sub": str(user_a.id), "role": "super_admin", "org_id": org_a.id})

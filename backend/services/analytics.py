@@ -198,17 +198,25 @@ class AnalyticsService:
         top_courses = [{"name": row[0], "booking_count": row[1]} for row in top_courses_result]
 
         # ========== 时段分布 ==========
-        from sqlalchemy import text
+        from sqlalchemy import text, inspect
+        # Dialect-aware SQL: SQLite uses strftime, PostgreSQL uses to_char
+        bind = db.get_bind()
+        dialect_name = bind.dialect.name if bind else "sqlite"
+        if dialect_name == "sqlite":
+            hour_sql = "strftime('%H', cs.start_time)"
+        else:
+            hour_sql = "to_char(cs.start_time, 'HH24')"
+
         hour_rows = await db.execute(
-            text("""
-                SELECT to_char(cs.start_time, 'HH24') AS hour, count(b.id) AS count
+            text(f"""
+                SELECT {hour_sql} AS hour, count(b.id) AS count
                 FROM bookings b
                 JOIN course_schedules cs ON cs.id = b.schedule_id
                 WHERE b.organization_id = :org_id
                   AND cs.start_time >= :start
                   AND cs.start_time < :end
                   AND b.status != 'CANCELLED'
-                GROUP BY to_char(cs.start_time, 'HH24')
+                GROUP BY hour
                 ORDER BY hour
             """),
             {"org_id": organization_id, "start": today_start, "end": today_start + timedelta(days=1)},

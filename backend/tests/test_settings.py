@@ -39,7 +39,8 @@ class TestSettingsAPI:
     async def test_create_user(self, client, db, auth_headers):
         resp = await client.post("/api/v1/settings/users", json={
             "username": "testreceptionist",
-            "password": "test123456",
+            "email": "testreceptionist@example.com",
+            "password": "Test123456",
             "role": "receptionist",
         }, headers=auth_headers)
         assert resp.status_code == 200
@@ -52,12 +53,14 @@ class TestSettingsAPI:
     async def test_create_duplicate_user(self, client, db, auth_headers):
         await client.post("/api/v1/settings/users", json={
             "username": "duplicateuser",
-            "password": "test123456",
+            "email": "duplicateuser@example.com",
+            "password": "Test123456",
             "role": "coach",
         }, headers=auth_headers)
         resp = await client.post("/api/v1/settings/users", json={
             "username": "duplicateuser",
-            "password": "test123456",
+            "email": "duplicateuser2@example.com",
+            "password": "Test123456",
             "role": "coach",
         }, headers=auth_headers)
         assert resp.status_code == 400
@@ -66,7 +69,8 @@ class TestSettingsAPI:
     async def test_update_user(self, client, db, auth_headers):
         resp = await client.post("/api/v1/settings/users", json={
             "username": "updatetest",
-            "password": "test123456",
+            "email": "updatetest@example.com",
+            "password": "Test123456",
             "role": "receptionist",
         }, headers=auth_headers)
         user_id = resp.json()["id"]
@@ -84,19 +88,20 @@ class TestSettingsAPI:
     async def test_reset_password(self, client, db, auth_headers):
         resp = await client.post("/api/v1/settings/users", json={
             "username": "resetpwd",
-            "password": "oldpassword",
+            "email": "resetpwd@example.com",
+            "password": "Oldpass123",
             "role": "receptionist",
         }, headers=auth_headers)
         user_id = resp.json()["id"]
 
         resp = await client.put(f"/api/v1/settings/users/{user_id}", json={
-            "password": "newpassword123",
+            "password": "Newpass123",
         }, headers=auth_headers)
         assert resp.status_code == 200
 
         login_resp = await client.post("/api/v1/auth/login", json={
             "username": "resetpwd",
-            "password": "newpassword123",
+            "password": "Newpass123",
         })
         assert login_resp.status_code == 200
 

@@ -162,15 +162,18 @@ class AutomationEngine:
             db, organization_id, AutomationTriggerType.BIRTHDAY,
         )
         if birthday_rules:
-            today = now.strftime("%m-%d")
+            from sqlalchemy import func, extract
+            today = now
             members = await db.execute(
                 select(Member).where(
                     Member.organization_id == organization_id,
                     Member.status == MemberStatus.ACTIVE,
+                    Member.birthday.isnot(None),
+                    extract("month", Member.birthday) == today.month,
+                    extract("day", Member.birthday) == today.day,
                 )
             )
             for member in members.scalars().all():
-                if member.birthday and member.birthday.strftime("%m-%d") == today:
                     for rule in birthday_rules:
                         result = await AutomationEngine._execute_rule(
                             db, rule, "member", member.id,

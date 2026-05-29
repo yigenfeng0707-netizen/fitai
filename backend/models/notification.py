@@ -4,7 +4,7 @@
 from datetime import datetime
 from enum import Enum
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum as SQLEnum, Text, Boolean, JSON
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum as SQLEnum, Text, Boolean, JSON, Index
 from sqlalchemy.orm import relationship
 
 from backend.database_base import Base, TenantMixin
@@ -23,6 +23,10 @@ class NotificationType(str, Enum):
 
 class Notification(Base, TenantMixin):
     __tablename__ = "notifications"
+
+    __table_args__ = (
+        Index("ix_notifications_org_user_read_created", "organization_id", "user_id", "is_read", "created_at"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
