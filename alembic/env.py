@@ -17,7 +17,7 @@ from backend.config import settings
 from backend.models import (
     member, course, booking, coach, auth, order, organization,
     subscription, body_test, recommendation, lead, card_transaction,
-    notification, campaign, automation,
+    notification, campaign, automation, coupon,
 )  # noqa: F401, E402
 
 # this is the Alembic Config object

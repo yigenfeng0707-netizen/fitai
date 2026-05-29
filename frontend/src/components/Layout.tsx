@@ -19,6 +19,7 @@ import {
   SettingOutlined,
   ThunderboltOutlined,
   FireOutlined,
+  TagOutlined,
 } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
@@ -38,6 +39,7 @@ const menuItems: MenuProps['items'] = [
   { key: '/leads', icon: <AuditOutlined />, label: '潜客管理' },
   { key: '/campaigns', icon: <FireOutlined />, label: '营销活动' },
   { key: '/automations', icon: <ThunderboltOutlined />, label: '营销自动化' },
+  { key: '/coupons', icon: <TagOutlined />, label: '优惠券管理' },
   { key: '/schedules', icon: <TableOutlined />, label: '排课日历' },
   { key: '/checkin', icon: <CheckCircleOutlined />, label: '签到中心' },
   { key: '/cards', icon: <WalletOutlined />, label: '会员卡管理' },

@@ -25,6 +25,7 @@ import DataExport from './pages/DataExport'
 import Settings from './pages/Settings'
 import Campaigns from './pages/Campaigns'
 import Automations from './pages/Automations'
+import Coupons from './pages/Coupons'
 import Layout from './components/Layout'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -74,6 +75,7 @@ function App() {
             <Route path="export" element={<DataExport />} />
             <Route path="campaigns" element={<Campaigns />} />
             <Route path="automations" element={<Automations />} />
+            <Route path="coupons" element={<Coupons />} />
             <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>

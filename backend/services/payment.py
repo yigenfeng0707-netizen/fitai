@@ -75,6 +75,37 @@ class AlipayGateway(PaymentGateway):
         return PaymentResult(success=True, trade_no=order_no)
 
 
+class CashGateway(PaymentGateway):
+    """Cash/transfer payment - immediate confirmation."""
+
+    async def create_payment(
+        self,
+        order_no: str,
+        subject: str,
+        amount: float,
+        description: Optional[str] = None,
+    ) -> PaymentResult:
+        return PaymentResult(
+            success=True,
+            trade_no=f"CASH{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
+            message="Cash payment - confirm at counter",
+        )
+
+    async def verify_notification(self, data: dict) -> dict:
+        return data
+
+    async def refund(
+        self,
+        order_no: str,
+        amount: float,
+        reason: Optional[str] = None,
+    ) -> PaymentResult:
+        return PaymentResult(success=True, trade_no=f"REF{order_no}", message="Cash refund processed")
+
+    async def query(self, order_no: str) -> PaymentResult:
+        return PaymentResult(success=True, trade_no=order_no)
+
+
 class WeChatPayGateway(PaymentGateway):
     def __init__(self):
         from backend.services.wechat_pay_v3 import wechat_pay_v3 as v3
@@ -161,6 +192,8 @@ class PaymentService:
     def _register_defaults(self):
         self._gateways["alipay"] = AlipayGateway()
         self._gateways["wechat"] = WeChatPayGateway()
+        self._gateways["cash"] = CashGateway()
+        self._gateways["transfer"] = CashGateway()
 
     def register(self, method: str, gateway: PaymentGateway):
         self._gateways[method] = gateway

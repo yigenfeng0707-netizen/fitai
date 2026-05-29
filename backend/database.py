@@ -121,7 +121,7 @@ async def get_db():
 async def init_db():
     """初始化数据库表"""
     from sqlalchemy import select
-    from backend.models import member, course, booking, coach, auth, order, organization, body_test, recommendation, lead, campaign, automation  # noqa: F401
+    from backend.models import member, course, booking, coach, auth, order, organization, body_test, recommendation, lead, campaign, automation, coupon  # noqa: F401
     from backend.models.organization import Organization
     async with async_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
