@@ -2,7 +2,7 @@
 数据可视化仪表盘服务
 聚合多数据源，为前端图表提供统一 API
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select, func, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -76,7 +76,7 @@ class DashboardService:
         """
         高管仪表盘 - 一屏概览所有关键指标
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         thirty_days_ago = today_start - timedelta(days=29)
         month_start = today_start.replace(day=1)
@@ -425,7 +425,7 @@ class DashboardService:
         """
         门店仪表盘 - 单门店详情
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         thirty_days_ago = today_start - timedelta(days=29)
 
@@ -751,7 +751,7 @@ class DashboardService:
         """
         实时数据 - 当前营业状态
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
         # ========== 今日统计 ==========
@@ -892,92 +892,108 @@ class DashboardService:
         """
         同比分析 - 今年 vs 去年
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         current_year = now.year
         prev_year = current_year - 1
 
         months = [f"{m}月" for m in range(1, 13)]
 
+        curr_start = datetime(current_year, 1, 1)
+        curr_end = datetime(current_year + 1, 1, 1)
+        prev_start = datetime(prev_year, 1, 1)
+        prev_end = datetime(prev_year + 1, 1, 1)
+
+        if metric == "revenue":
+            curr_rows = await db.execute(
+                select(
+                    func.strftime('%m', Order.paid_at).label("month"),
+                    func.coalesce(func.sum(Order.actual_amount), 0).label("value"),
+                )
+                .where(
+                    Order.organization_id == organization_id,
+                    Order.payment_status == OrderStatus.PAID,
+                    Order.paid_at >= curr_start,
+                    Order.paid_at < curr_end,
+                )
+                .group_by(func.strftime('%m', Order.paid_at))
+            )
+            prev_rows = await db.execute(
+                select(
+                    func.strftime('%m', Order.paid_at).label("month"),
+                    func.coalesce(func.sum(Order.actual_amount), 0).label("value"),
+                )
+                .where(
+                    Order.organization_id == organization_id,
+                    Order.payment_status == OrderStatus.PAID,
+                    Order.paid_at >= prev_start,
+                    Order.paid_at < prev_end,
+                )
+                .group_by(func.strftime('%m', Order.paid_at))
+            )
+        elif metric == "members":
+            curr_rows = await db.execute(
+                select(
+                    func.strftime('%m', Member.created_at).label("month"),
+                    func.count(Member.id).label("value"),
+                )
+                .where(
+                    Member.organization_id == organization_id,
+                    Member.created_at >= curr_start,
+                    Member.created_at < curr_end,
+                )
+                .group_by(func.strftime('%m', Member.created_at))
+            )
+            prev_rows = await db.execute(
+                select(
+                    func.strftime('%m', Member.created_at).label("month"),
+                    func.count(Member.id).label("value"),
+                )
+                .where(
+                    Member.organization_id == organization_id,
+                    Member.created_at >= prev_start,
+                    Member.created_at < prev_end,
+                )
+                .group_by(func.strftime('%m', Member.created_at))
+            )
+        else:  # bookings
+            curr_rows = await db.execute(
+                select(
+                    func.strftime('%m', CourseSchedule.start_time).label("month"),
+                    func.count(Booking.id).label("value"),
+                )
+                .join(Booking, Booking.schedule_id == CourseSchedule.id)
+                .where(
+                    Booking.organization_id == organization_id,
+                    CourseSchedule.start_time >= curr_start,
+                    CourseSchedule.start_time < curr_end,
+                    Booking.status != BookingStatus.CANCELLED,
+                )
+                .group_by(func.strftime('%m', CourseSchedule.start_time))
+            )
+            prev_rows = await db.execute(
+                select(
+                    func.strftime('%m', CourseSchedule.start_time).label("month"),
+                    func.count(Booking.id).label("value"),
+                )
+                .join(Booking, Booking.schedule_id == CourseSchedule.id)
+                .where(
+                    Booking.organization_id == organization_id,
+                    CourseSchedule.start_time >= prev_start,
+                    CourseSchedule.start_time < prev_end,
+                    Booking.status != BookingStatus.CANCELLED,
+                )
+                .group_by(func.strftime('%m', CourseSchedule.start_time))
+            )
+
+        curr_map = {str(r.month).zfill(2): float(r.value) for r in curr_rows}
+        prev_map = {str(r.month).zfill(2): float(r.value) for r in prev_rows}
+
         current_year_data = []
         previous_year_data = []
-
         for month in range(1, 13):
-            month_start = datetime(current_year, month, 1)
-            if month == 12:
-                month_end = datetime(current_year + 1, 1, 1)
-            else:
-                month_end = datetime(current_year, month + 1, 1)
-
-            prev_month_start = datetime(prev_year, month, 1)
-            if month == 12:
-                prev_month_end = datetime(prev_year + 1, 1, 1)
-            else:
-                prev_month_end = datetime(prev_year, month + 1, 1)
-
-            if metric == "revenue":
-                curr_raw = await db.execute(
-                    select(func.coalesce(func.sum(Order.actual_amount), 0))
-                    .where(
-                        Order.organization_id == organization_id,
-                        Order.payment_status == OrderStatus.PAID,
-                        Order.paid_at >= month_start,
-                        Order.paid_at < month_end,
-                    )
-                )
-                prev_raw = await db.execute(
-                    select(func.coalesce(func.sum(Order.actual_amount), 0))
-                    .where(
-                        Order.organization_id == organization_id,
-                        Order.payment_status == OrderStatus.PAID,
-                        Order.paid_at >= prev_month_start,
-                        Order.paid_at < prev_month_end,
-                    )
-                )
-            elif metric == "members":
-                curr_raw = await db.execute(
-                    select(func.count(Member.id)).where(
-                        Member.organization_id == organization_id,
-                        Member.created_at >= month_start,
-                        Member.created_at < month_end,
-                    )
-                )
-                prev_raw = await db.execute(
-                    select(func.count(Member.id)).where(
-                        Member.organization_id == organization_id,
-                        Member.created_at >= prev_month_start,
-                        Member.created_at < prev_month_end,
-                    )
-                )
-            else:  # bookings
-                curr_raw = await db.execute(
-                    select(func.count(Booking.id))
-                    .join(CourseSchedule)
-                    .where(
-                        Booking.organization_id == organization_id,
-                        CourseSchedule.start_time >= month_start,
-                        CourseSchedule.start_time < month_end,
-                        Booking.status != BookingStatus.CANCELLED,
-                    )
-                )
-                prev_raw = await db.execute(
-                    select(func.count(Booking.id))
-                    .join(CourseSchedule)
-                    .where(
-                        Booking.organization_id == organization_id,
-                        CourseSchedule.start_time >= prev_month_start,
-                        CourseSchedule.start_time < prev_month_end,
-                        Booking.status != BookingStatus.CANCELLED,
-                    )
-                )
-
-            current_year_data.append({
-                "label": f"{month}月",
-                "value": float(curr_raw.scalar() or 0),
-            })
-            previous_year_data.append({
-                "label": f"{month}月",
-                "value": float(prev_raw.scalar() or 0),
-            })
+            m = str(month).zfill(2)
+            current_year_data.append({"label": f"{month}月", "value": curr_map.get(m, 0.0)})
+            previous_year_data.append({"label": f"{month}月", "value": prev_map.get(m, 0.0)})
 
         return {
             "current_year": current_year_data,
@@ -997,7 +1013,7 @@ class DashboardService:
         - 异常营收波动
         - 课程满课率过低
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         alerts = []
 
         # ========== 即将到期的会员卡 (30天内) ==========

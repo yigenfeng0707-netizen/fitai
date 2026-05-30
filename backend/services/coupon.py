@@ -1,6 +1,6 @@
 import random
 import string
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import select, func
@@ -62,7 +62,7 @@ class CouponService:
         coupon = result.scalar_one_or_none()
         if not coupon:
             raise ValueError("优惠券不存在或已禁用")
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         if coupon.start_date and now < coupon.start_date:
             raise ValueError("优惠券尚未生效")
         if coupon.end_date and now > coupon.end_date:

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from backend.config import settings
@@ -54,7 +54,7 @@ class AlipayGateway(PaymentGateway):
     ) -> PaymentResult:
         return PaymentResult(
             success=True,
-            trade_no=f"ALI{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
+            trade_no=f"ALI{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}",
             redirect_url=f"{settings.ALIPAY_GATEWAY_URL}?order_no={order_no}",
         )
 
@@ -87,7 +87,7 @@ class CashGateway(PaymentGateway):
     ) -> PaymentResult:
         return PaymentResult(
             success=True,
-            trade_no=f"CASH{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
+            trade_no=f"CASH{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}",
             message="Cash payment - confirm at counter",
         )
 
@@ -189,7 +189,7 @@ class WeChatPayGateway(PaymentGateway):
         if not self._v3._enabled:
             return PaymentResult(
                 success=True,
-                trade_no=f"WX{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
+                trade_no=f"WX{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}",
                 message="WeChat Pay not configured — stub mode",
             )
         try:

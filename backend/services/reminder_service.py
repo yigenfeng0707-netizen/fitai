@@ -1,7 +1,7 @@
 """
 自动提醒服务 - 生日/到期自动提醒
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy import select, and_, or_, func, not_, exists
@@ -29,31 +29,44 @@ class ReminderService:
         - 查找 birthday 在未来 days_ahead 天内的活跃会员
         - 返回匹配的会员列表
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         end = now + timedelta(days=days_ahead)
 
-        # 获取所有活跃且有生日的会员
+        # Filter in SQL: compute this-year and next-year birthday candidates
+        # and check if they fall within the window.
+        # SQLite: use date(birthday, 'start of year', '+N year') pattern.
+        this_year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+        next_year_start = this_year_start.replace(year=this_year_start.year + 1)
+
         result = await db.execute(
             select(Member).where(
                 Member.organization_id == organization_id,
                 Member.status == MemberStatus.ACTIVE,
                 Member.birthday.isnot(None),
+                or_(
+                    # This year's birthday hasn't happened yet and is within window
+                    and_(
+                        func.date(Member.birthday, f"+{now.year - 1900} years") >= now.date(),
+                        func.date(Member.birthday, f"+{now.year - 1900} years") <= end.date(),
+                    ),
+                    # Next year's birthday is within window
+                    and_(
+                        func.date(Member.birthday, f"+{now.year + 1 - 1900} years") >= now.date(),
+                        func.date(Member.birthday, f"+{now.year + 1 - 1900} years") <= end.date(),
+                    ),
+                ),
             )
         )
         members = result.scalars().all()
 
         matched = []
         for member in members:
-            # 计算今年的生日
             birthday = member.birthday
-            # 构造今年的生日日期（保留原始时间）
             try:
                 this_year_birthday = birthday.replace(year=now.year)
             except ValueError:
-                # 闰年2月29日 -> 非闰年用2月28日
                 this_year_birthday = birthday.replace(year=now.year, day=28)
 
-            # 如果今年的生日已过，检查明年的
             if this_year_birthday < now:
                 try:
                     next_birthday = birthday.replace(year=now.year + 1)
@@ -62,7 +75,6 @@ class ReminderService:
             else:
                 next_birthday = this_year_birthday
 
-            # 检查是否在 days_ahead 范围内
             if now <= next_birthday <= end:
                 days_until = (next_birthday.date() - now.date()).days
                 matched.append({
@@ -87,7 +99,7 @@ class ReminderService:
         - 查找 card_end_date 在未来 days_ahead 天内的活跃会员
         - 返回匹配的会员列表
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         end = now + timedelta(days=days_ahead)
 
         result = await db.execute(
@@ -126,7 +138,7 @@ class ReminderService:
         - 查找 card_end_date 在过去 days_after 天内且状态仍为 active 的会员
         - 返回匹配的会员列表
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         start = now - timedelta(days=days_after)
 
         result = await db.execute(
@@ -165,59 +177,48 @@ class ReminderService:
         - 查找最近 no_visit_days 天内没有预约/签到记录的活跃会员
         - 返回匹配的会员列表
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         cutoff = now - timedelta(days=no_visit_days)
 
-        # 获取所有活跃会员
+        # Batch: get all active members with their recent booking count and last visit
         result = await db.execute(
-            select(Member).where(
+            select(
+                Member.id,
+                Member.name,
+                Member.phone,
+                Member.created_at,
+                func.count(Booking.id).label("recent_booking_count"),
+                func.max(Booking.created_at).label("last_booking_at"),
+            )
+            .outerjoin(Booking, and_(
+                Booking.member_id == Member.id,
+                Booking.organization_id == organization_id,
+                Booking.created_at >= cutoff,
+                Booking.status.in_([
+                    BookingStatus.PENDING,
+                    BookingStatus.CONFIRMED,
+                    BookingStatus.CHECKED_IN,
+                    BookingStatus.COMPLETED,
+                ]),
+            ))
+            .where(
                 Member.organization_id == organization_id,
                 Member.status == MemberStatus.ACTIVE,
             )
+            .group_by(Member.id, Member.name, Member.phone, Member.created_at)
         )
-        members = result.scalars().all()
 
         matched = []
-        for member in members:
-            # 检查该会员在 cutoff 之后是否有预约或签到记录
-            recent_booking = await db.execute(
-                select(func.count()).select_from(Booking).where(
-                    Booking.member_id == member.id,
-                    Booking.organization_id == organization_id,
-                    Booking.created_at >= cutoff,
-                    Booking.status.in_([
-                        BookingStatus.PENDING,
-                        BookingStatus.CONFIRMED,
-                        BookingStatus.CHECKED_IN,
-                        BookingStatus.COMPLETED,
-                    ]),
-                )
-            )
-            booking_count = recent_booking.scalar() or 0
-
-            if booking_count == 0:
-                # 查找最近一次预约/签到的时间
-                last_booking = await db.execute(
-                    select(func.max(Booking.created_at)).where(
-                        Booking.member_id == member.id,
-                        Booking.organization_id == organization_id,
-                        Booking.status.in_([
-                            BookingStatus.PENDING,
-                            BookingStatus.CONFIRMED,
-                            BookingStatus.CHECKED_IN,
-                            BookingStatus.COMPLETED,
-                        ]),
-                    )
-                )
-                last_visit = last_booking.scalar()
+        for row in result:
+            if row.recent_booking_count == 0:
+                last_visit = row.last_booking_at
                 last_visit_date = last_visit.date() if last_visit else None
-
                 matched.append({
-                    "member_id": member.id,
-                    "member_name": member.name,
-                    "phone": member.phone,
+                    "member_id": row.id,
+                    "member_name": row.name,
+                    "phone": row.phone,
                     "type": "no_visit",
-                    "trigger_date": last_visit_date or member.created_at.date(),
+                    "trigger_date": last_visit_date or row.created_at.date(),
                     "days_until": -no_visit_days,
                 })
 

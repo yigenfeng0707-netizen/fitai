@@ -2,7 +2,7 @@
 ETL 服务 - 数据仓库预聚合
 从 orders, members, bookings, course_schedules 等表聚合数据到预统计表
 """
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy import select, func, and_, or_, cast, Float as SAFloat
@@ -645,67 +645,78 @@ class ETLService:
         会员留存分析 - 按注册月份分组
         - 返回每月注册的会员在第1/2/3...月的留存率
         """
-        # 获取所有注册会员的注册月份
-        members_result = await db.execute(
+        # Step 1: Get all members with their cohort month (1 query)
+        member_rows = await db.execute(
             select(
-                func.strftime('%Y-%m', Member.created_at).label("cohort_month"),
                 Member.id,
+                func.strftime('%Y-%m', Member.created_at).label("cohort_month"),
             )
             .where(Member.organization_id == organization_id)
         )
-        all_members = members_result.fetchall()
+        member_cohorts = {}  # cohort_month -> [member_id, ...]
+        for row in member_rows:
+            cm = row.cohort_month
+            if cm not in member_cohorts:
+                member_cohorts[cm] = []
+            member_cohorts[cm].append(row.id)
 
-        if not all_members:
+        if not member_cohorts:
             return []
 
-        # 按注册月份分组
-        cohorts: dict[str, list[int]] = {}
-        for cohort_month, member_id in all_members:
-            if cohort_month not in cohorts:
-                cohorts[cohort_month] = []
-            cohorts[cohort_month].append(member_id)
+        # Determine the broad date range needed
+        cohort_months = sorted(member_cohorts.keys())
+        earliest_cohort = datetime.strptime(cohort_months[0], "%Y-%m")
+        latest_target = datetime.strptime(cohort_months[-1], "%Y-%m") + timedelta(days=32 * 13)
 
-        # 计算每个cohort的留存率 (最多12个月)
+        # Step 2: Get all bookings and orders in the date range (2 queries)
+        booking_rows = await db.execute(
+            select(Booking.member_id, Booking.created_at)
+            .where(
+                Booking.organization_id == organization_id,
+                Booking.created_at >= earliest_cohort,
+                Booking.created_at < latest_target,
+            )
+        )
+        order_rows = await db.execute(
+            select(Order.member_id, Order.created_at)
+            .where(
+                Order.organization_id == organization_id,
+                Order.created_at >= earliest_cohort,
+                Order.created_at < latest_target,
+            )
+        )
+
+        # Build lookup: member_id -> set of (year, month) tuples with activity
+        from collections import defaultdict
+        active_months: dict[int, set[tuple[int, int]]] = defaultdict(set)
+        for row in booking_rows:
+            active_months[row.member_id].add((row.created_at.year, row.created_at.month))
+        for row in order_rows:
+            active_months[row.member_id].add((row.created_at.year, row.created_at.month))
+
+        # Step 3: Compute retention per cohort in Python
         result = []
-        for cohort_month in sorted(cohorts.keys()):
-            member_ids = cohorts[cohort_month]
+        for cm in cohort_months:
+            member_ids = member_cohorts[cm]
             cohort_size = len(member_ids)
+            cohort_date = datetime.strptime(cm, "%Y-%m")
             cohort_data = {
-                "cohort_month": cohort_month,
+                "cohort_month": cm,
                 "cohort_size": cohort_size,
                 "retention": [],
             }
 
-            for month_offset in range(1, 13):
-                # 计算该月的时间范围
-                cohort_date = datetime.strptime(cohort_month, "%Y-%m")
-                target_month_start = cohort_date + timedelta(days=32 * month_offset)
-                target_month_start = target_month_start.replace(day=1)
-                target_month_end = (target_month_start + timedelta(days=32)).replace(day=1)
+            for offset in range(1, 13):
+                target_date = cohort_date + timedelta(days=32 * offset)
+                target_year, target_month = target_date.year, target_date.month
 
-                # 统计该月有活动的会员数
-                active_count = 0
-                for mid in member_ids:
-                    has_booking = await db.execute(
-                        select(func.count(Booking.id)).where(
-                            Booking.member_id == mid,
-                            Booking.created_at >= target_month_start,
-                            Booking.created_at < target_month_end,
-                        )
-                    )
-                    has_order = await db.execute(
-                        select(func.count(Order.id)).where(
-                            Order.member_id == mid,
-                            Order.created_at >= target_month_start,
-                            Order.created_at < target_month_end,
-                        )
-                    )
-                    if int(has_booking.scalar() or 0) > 0 or int(has_order.scalar() or 0) > 0:
-                        active_count += 1
-
+                active_count = sum(
+                    1 for mid in member_ids
+                    if (target_year, target_month) in active_months.get(mid, set())
+                )
                 retention_rate = round(active_count / cohort_size * 100, 1) if cohort_size > 0 else 0
                 cohort_data["retention"].append({
-                    "month": month_offset,
+                    "month": offset,
                     "active_count": active_count,
                     "retention_rate": retention_rate,
                 })
@@ -795,7 +806,7 @@ class ETLService:
         - 流失原因分布
         - 高风险会员列表
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         # 总体流失率
         total_members_result = await db.execute(

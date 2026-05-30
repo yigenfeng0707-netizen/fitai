@@ -1,7 +1,7 @@
 """
 CRUD - 消息通知
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import select, func, update
@@ -107,7 +107,7 @@ class NotificationCRUD:
         notification = result.scalar_one_or_none()
         if notification and not notification.is_read:
             notification.is_read = True
-            notification.read_at = datetime.utcnow()
+            notification.read_at = datetime.now(timezone.utc)
             await db.flush()
         return notification
 
@@ -120,7 +120,7 @@ class NotificationCRUD:
                 Notification.organization_id == organization_id,
                 Notification.is_read.is_(False),
             )
-            .values(is_read=True, read_at=datetime.utcnow())
+            .values(is_read=True, read_at=datetime.now(timezone.utc))
         )
         await db.flush()
         return result.rowcount

@@ -1,7 +1,7 @@
 """
 数据库模型 - 通知模板
 """
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, JSON
 
@@ -20,5 +20,5 @@ class NotificationTemplate(Base, TenantMixin):
     notification_type = Column(String(50), default="system")
     variables = Column(JSON, default=[])  # list of variable names
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

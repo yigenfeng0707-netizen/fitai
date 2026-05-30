@@ -1,7 +1,7 @@
 """
 健身预约 booking model
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from sqlalchemy import Column, Integer, String, DateTime, Enum as SAEnum, ForeignKey, Index
 from backend.database_base import Base, TenantMixin, StoreScopeMixin
@@ -48,8 +48,8 @@ class Booking(Base, TenantMixin, StoreScopeMixin):
 
     notes = Column(String(200), nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 # 反向关系 (imported here to break circular dependency)

@@ -1,7 +1,7 @@
 """
 数据库模型 - 教练
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Float, DateTime, Text, JSON, Boolean, Index
 from sqlalchemy.orm import relationship
 
@@ -41,8 +41,8 @@ class Coach(Base, TenantMixin, StoreScopeMixin):
     is_active = Column(Boolean, default=True, index=True)
 
     # 时间
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # 关联
     members = relationship("Member", back_populates="coach")

@@ -4,7 +4,7 @@ AI 服务层 - 封装 AI 推理逻辑
 """
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime
+from datetime import datetime, timezone
 
 from backend.models.member import Member, CardType
 from backend.models.course import Course, CourseSchedule
@@ -173,7 +173,7 @@ class AIService:
         db: AsyncSession,
         organization_id: int,
     ) -> dict:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 

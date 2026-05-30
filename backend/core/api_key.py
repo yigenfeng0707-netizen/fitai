@@ -7,7 +7,7 @@ API Key 管理模块
 import hashlib
 import secrets
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy import select
@@ -58,7 +58,7 @@ class ApiKeyService:
             user_id=user_id,
             organization_id=organization_id,
             is_active=True,
-            expires_at=datetime.utcnow() + timedelta(days=expires_in_days),
+            expires_at=datetime.now(timezone.utc) + timedelta(days=expires_in_days),
         )
         db.add(api_key)
         await db.flush()
@@ -88,11 +88,11 @@ class ApiKeyService:
             return None
 
         # 检查是否过期
-        if api_key.expires_at and api_key.expires_at < datetime.utcnow():
+        if api_key.expires_at and api_key.expires_at < datetime.now(timezone.utc):
             return None
 
         # 更新最后使用时间
-        api_key.last_used_at = datetime.utcnow()
+        api_key.last_used_at = datetime.now(timezone.utc)
         await db.flush()
 
         return api_key
@@ -121,7 +121,7 @@ class ApiKeyService:
 
         # 禁用旧 Key
         old_key.is_active = False
-        old_key.revoked_at = datetime.utcnow()
+        old_key.revoked_at = datetime.now(timezone.utc)
 
         # 创建新 Key
         return await ApiKeyService.create(
@@ -152,7 +152,7 @@ class ApiKeyService:
             raise ValueError("API Key 不存在")
 
         api_key.is_active = False
-        api_key.revoked_at = datetime.utcnow()
+        api_key.revoked_at = datetime.now(timezone.utc)
         await db.flush()
 
     @staticmethod

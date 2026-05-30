@@ -1,7 +1,7 @@
 """
 API - 小程序课程/预约
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -173,7 +173,7 @@ async def get_schedules(
         query = query.where(CourseSchedule.course_id == course_id)
 
     # 只返回未来的排课
-    query = query.where(CourseSchedule.start_time >= datetime.utcnow())
+    query = query.where(CourseSchedule.start_time >= datetime.now(timezone.utc))
 
     total_result = await db.execute(
         select(func.count()).select_from(query.subquery())
@@ -430,7 +430,7 @@ async def cancel_booking(
 
     # 更新预约状态
     booking.status = BookingStatus.CANCELLED
-    booking.cancelled_at = datetime.utcnow()
+    booking.cancelled_at = datetime.now(timezone.utc)
     booking.cancelled_by = current_user.id
     booking.cancel_reason = "用户自行取消"
 
@@ -486,7 +486,7 @@ async def check_in(
 
     # 更新签到状态
     booking.status = BookingStatus.CHECKED_IN
-    booking.check_in_time = datetime.utcnow()
+    booking.check_in_time = datetime.now(timezone.utc)
     booking.check_in_method = "mini_program"
     await db.flush()
 
@@ -517,8 +517,8 @@ async def check_in(
         schedule_id=booking.schedule_id,
         course_name=course_name,
         coach_name=coach_name,
-        start_time=schedule.start_time if schedule else datetime.utcnow(),
-        end_time=schedule.end_time if schedule else datetime.utcnow(),
+        start_time=schedule.start_time if schedule else datetime.now(timezone.utc),
+        end_time=schedule.end_time if schedule else datetime.now(timezone.utc),
         status=booking.status.value,
         check_in_time=booking.check_in_time,
         can_cancel=False,
@@ -536,7 +536,7 @@ async def get_today_bookings(
 
     member_id = _get_member_from_user(current_user)
 
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     today_end = today_start + timedelta(days=1)
 
     result = await db.execute(

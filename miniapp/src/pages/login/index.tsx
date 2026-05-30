@@ -112,7 +112,6 @@ export default function Login() {
           <View className="login-form__wx">
             <Button
               className="login-form__wx-btn"
-              openType="getPhoneNumber"
               loading={loading}
               onClick={handleWxLogin}
             >

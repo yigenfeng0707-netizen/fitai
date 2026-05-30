@@ -1,0 +1,37 @@
+.page-settings {
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+.settings-group {
+  background: #fff;
+  border-radius: 16rpx;
+  margin: 20rpx;
+  overflow: hidden;
+}
+
+.settings-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &__label {
+    font-size: 30rpx;
+    color: #333;
+
+    &--danger {
+      color: #e53e3e;
+    }
+  }
+
+  &__value {
+    font-size: 28rpx;
+    color: #999;
+  }
+}

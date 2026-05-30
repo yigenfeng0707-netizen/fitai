@@ -1,7 +1,7 @@
 """
 API - 小程序会员
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -264,8 +264,8 @@ async def get_my_bookings(
             schedule_id=booking.schedule_id,
             course_name=course_name,
             coach_name=coach_name,
-            start_time=start_time or datetime.utcnow(),
-            end_time=end_time or datetime.utcnow(),
+            start_time=start_time or datetime.now(timezone.utc),
+            end_time=end_time or datetime.now(timezone.utc),
             status=booking.status.value,
             check_in_time=booking.check_in_time,
             can_cancel=can_cancel,
@@ -379,7 +379,7 @@ async def mark_notification_read(
         )
 
     notification.is_read = True
-    notification.read_at = datetime.utcnow()
+    notification.read_at = datetime.now(timezone.utc)
     await db.flush()
 
     return BaseResponse(message="标记成功")
@@ -399,8 +399,69 @@ async def mark_all_notifications_read(
             Notification.user_id == current_user.id,
             Notification.is_read == False,  # noqa: E712
         )
-        .values(is_read=True, read_at=datetime.utcnow())
+        .values(is_read=True, read_at=datetime.now(timezone.utc))
     )
     await db.flush()
 
     return BaseResponse(message="全部标记成功")
+
+
+@router.get("/checkin/qrcode")
+async def get_checkin_qrcode(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    生成签到二维码
+    二维码内容为签名的 token，包含会员ID和时间戳，有效期5分钟
+    """
+    import io
+    import base64
+    import time
+    import hashlib
+    import hmac
+
+    member_id = _get_member_from_user(current_user)
+
+    # 生成签名 token
+    timestamp = str(int(time.time()))
+    payload = f"{member_id}:{timestamp}"
+    secret = "fitai_checkin_secret"  # 生产环境应从配置读取
+    signature = hmac.new(secret.encode(), payload.encode(), hashlib.sha256).hexdigest()[:16]
+    token = f"{payload}:{signature}"
+
+    # 生成二维码
+    try:
+        import qrcode
+        from qrcode.image.pil import PilImage
+
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(f"fitai://checkin?token={token}")
+        qr.make(fit=True)
+
+        img = qr.make_image(fill_color="#1a1a2e", back_color="white")
+
+        # 转为 base64
+        buffer = io.BytesIO()
+        img.save(buffer, format="PNG")
+        buffer.seek(0)
+        img_base64 = base64.b64encode(buffer.getvalue()).decode()
+
+        return BaseResponse(data={
+            "qrcode": f"data:image/png;base64,{img_base64}",
+            "token": token,
+            "expires_in": 300,
+        })
+    except ImportError:
+        # qrcode 库不可用时返回占位
+        return BaseResponse(data={
+            "qrcode": "",
+            "token": token,
+            "expires_in": 300,
+            "message": "二维码生成库未安装",
+        })

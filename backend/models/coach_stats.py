@@ -1,7 +1,7 @@
 """
 数据库模型 - 教练每日统计
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, Float, DateTime, Date, ForeignKey, Index
 from backend.database_base import Base, TenantMixin
 
@@ -22,7 +22,7 @@ class CoachDailyStats(Base, TenantMixin):
     new_students = Column(Integer, default=0)  # 新学员数
     revenue_contribution = Column(Float, default=0)  # 营收贡献
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
         Index('ix_coach_stats_org_coach_date', 'organization_id', 'coach_id', 'stat_date', unique=True),

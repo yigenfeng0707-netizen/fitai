@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, JSON, Index
 
 from backend.database_base import Base, TenantMixin
@@ -28,4 +28,4 @@ class AIRecommendation(Base, TenantMixin):
     is_read = Column(Integer, default=0)
     is_applied = Column(Integer, default=0)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

@@ -1,7 +1,7 @@
 """
 CRUD - 会员
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy import select, func
@@ -42,18 +42,18 @@ class MemberCRUD:
         # 初始化卡信息
         if obj_in.initial_card_type == CardType.SINGLE and obj_in.initial_card_count:
             card_remaining_count = obj_in.initial_card_count
-            card_start_date = datetime.utcnow()
+            card_start_date = datetime.now(timezone.utc)
         elif obj_in.initial_card_type == CardType.STORED and obj_in.initial_card_balance:
             card_balance = obj_in.initial_card_balance
-            card_start_date = datetime.utcnow()
+            card_start_date = datetime.now(timezone.utc)
         elif obj_in.initial_card_type in [CardType.MONTHLY, CardType.QUARTERLY, CardType.YEARLY]:
-            card_start_date = datetime.utcnow()
+            card_start_date = datetime.now(timezone.utc)
             duration_days = {
                 CardType.MONTHLY: 30,
                 CardType.QUARTERLY: 90,
                 CardType.YEARLY: 365,
             }
-            card_end_date = datetime.utcnow() + timedelta(days=duration_days[obj_in.initial_card_type])
+            card_end_date = datetime.now(timezone.utc) + timedelta(days=duration_days[obj_in.initial_card_type])
         
         member = Member(
             name=obj_in.name,

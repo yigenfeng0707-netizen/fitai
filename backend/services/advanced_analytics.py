@@ -2,7 +2,7 @@
 from datetime import date, datetime, timedelta
 from typing import Optional
 
-from sqlalchemy import select, func, case, text
+from sqlalchemy import select, func, case, text, Float as SAFloat
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.models.order import Order, OrderStatus
@@ -575,81 +575,96 @@ class AdvancedAnalyticsService:
         start_dt = datetime.combine(start_date, datetime.min.time())
         end_dt = datetime.combine(end_date, datetime.max.time())
 
-        coach_filters = [
-            Coach.organization_id == organization_id,
-            Coach.is_active.is_(True),
-        ]
-
-        # 获取所有活跃教练
+        # Fetch all active coaches
         coaches_result = await db.execute(
-            select(Coach.id, Coach.name, Coach.avg_rating).where(*coach_filters)
+            select(Coach.id, Coach.name, Coach.avg_rating).where(
+                Coach.organization_id == organization_id,
+                Coach.is_active.is_(True),
+            )
         )
         coaches = [(r.id, r.name, r.avg_rating) for r in coaches_result]
 
+        if not coaches:
+            return []
+
+        # Batch: class counts per coach
+        schedule_filters = [
+            CourseSchedule.organization_id == organization_id,
+            CourseSchedule.start_time >= start_dt,
+            CourseSchedule.start_time <= end_dt,
+            CourseSchedule.status != "cancelled",
+        ]
+        if store_id:
+            schedule_filters.append(CourseSchedule.store_id == store_id)
+
+        classes_rows = await db.execute(
+            select(
+                Course.coach_id,
+                func.count(CourseSchedule.id).label("class_count"),
+            )
+            .select_from(CourseSchedule)
+            .join(Course, CourseSchedule.course_id == Course.id)
+            .where(Course.coach_id.in_([c[0] for c in coaches]), *schedule_filters)
+            .group_by(Course.coach_id)
+        )
+        classes_map = {r.coach_id: r.class_count for r in classes_rows}
+
+        # Batch: distinct student counts per coach
+        students_rows = await db.execute(
+            select(
+                Course.coach_id,
+                func.count(func.distinct(Booking.member_id)).label("student_count"),
+            )
+            .select_from(Booking)
+            .join(CourseSchedule, Booking.schedule_id == CourseSchedule.id)
+            .join(Course, CourseSchedule.course_id == Course.id)
+            .where(
+                Course.coach_id.in_([c[0] for c in coaches]),
+                Booking.status != BookingStatus.CANCELLED,
+                *schedule_filters,
+            )
+            .group_by(Course.coach_id)
+        )
+        students_map = {r.coach_id: r.student_count for r in students_rows}
+
+        # Batch: revenue contribution per coach
+        revenue_rows = await db.execute(
+            select(
+                Course.coach_id,
+                func.coalesce(func.sum(Order.actual_amount), 0).label("revenue"),
+            )
+            .select_from(Order)
+            .join(Course, Order.product_id == Course.id)
+            .where(
+                Course.coach_id.in_([c[0] for c in coaches]),
+                Order.organization_id == organization_id,
+                Order.payment_status == OrderStatus.PAID,
+                Order.paid_at >= start_dt,
+                Order.paid_at <= end_dt,
+            )
+            .group_by(Course.coach_id)
+        )
+        revenue_map = {r.coach_id: float(r.revenue) for r in revenue_rows}
+
+        # Store name (single query if filtering by store)
+        store_name = None
+        if store_id:
+            store_result = await db.execute(
+                select(Store.name).where(Store.id == store_id)
+            )
+            store_name = store_result.scalar()
+
+        # Utilization parameters
+        period_days = (end_date - start_date).days + 1
+        work_days = max(1, period_days * 5 // 7)
+        max_capacity = work_days * 6
+
         results = []
         for coach_id, coach_name, avg_rating in coaches:
-            # 课时数
-            schedule_filters = [
-                CourseSchedule.organization_id == organization_id,
-                CourseSchedule.start_time >= start_dt,
-                CourseSchedule.start_time <= end_dt,
-                CourseSchedule.status != "cancelled",
-            ]
-            if store_id:
-                schedule_filters.append(CourseSchedule.store_id == store_id)
-
-            classes_raw = await db.execute(
-                select(func.count(CourseSchedule.id))
-                .select_from(CourseSchedule)
-                .join(Course, CourseSchedule.course_id == Course.id)
-                .where(Course.coach_id == coach_id, *schedule_filters)
-            )
-            classes_taught = classes_raw.scalar() or 0
-
-            # 总学员数（去重）
-            students_raw = await db.execute(
-                select(func.count(func.distinct(Booking.member_id)))
-                .select_from(Booking)
-                .join(CourseSchedule, Booking.schedule_id == CourseSchedule.id)
-                .join(Course, CourseSchedule.course_id == Course.id)
-                .where(
-                    Course.coach_id == coach_id,
-                    Booking.status != BookingStatus.CANCELLED,
-                    *schedule_filters,
-                )
-            )
-            total_students = students_raw.scalar() or 0
-
-            # 营收贡献（通过课程关联的订单）
-            revenue_raw = await db.execute(
-                select(func.coalesce(func.sum(Order.actual_amount), 0))
-                .select_from(Order)
-                .join(Course, Order.product_id == Course.id)
-                .where(
-                    Course.coach_id == coach_id,
-                    Order.organization_id == organization_id,
-                    Order.payment_status == OrderStatus.PAID,
-                    Order.paid_at >= start_dt,
-                    Order.paid_at <= end_dt,
-                )
-            )
-            revenue_contribution = float(revenue_raw.scalar() or 0)
-
-            # 教练利用率 = 实际排课数 / 可排课容量
-            # 简化计算：用工作日数 * 标准课时数作为分母
-            period_days = (end_date - start_date).days + 1
-            work_days = max(1, period_days * 5 // 7)  # 估算工作日
-            max_classes_per_day = 6  # 假设每天最多6节课
-            max_capacity = work_days * max_classes_per_day
+            classes_taught = classes_map.get(coach_id, 0)
+            total_students = students_map.get(coach_id, 0)
+            revenue_contribution = revenue_map.get(coach_id, 0.0)
             utilization_rate = round((classes_taught / max_capacity * 100), 1) if max_capacity > 0 else 0.0
-
-            # 门店名称
-            store_name = None
-            if store_id:
-                store_result = await db.execute(
-                    select(Store.name).where(Store.id == store_id)
-                )
-                store_name = store_result.scalar()
 
             results.append({
                 "coach_id": coach_id,
@@ -662,7 +677,6 @@ class AdvancedAnalyticsService:
                 "utilization_rate": utilization_rate,
             })
 
-        # 按课时数降序排列
         results.sort(key=lambda x: x["classes_taught"], reverse=True)
         return results
 
@@ -779,79 +793,110 @@ class AdvancedAnalyticsService:
         )
         stores = [(r.id, r.name) for r in stores_result]
 
+        if not stores:
+            return []
+
+        store_ids = [s[0] for s in stores]
+
+        # Batch: revenue per store
+        revenue_rows = await db.execute(
+            select(
+                Order.store_id,
+                func.coalesce(func.sum(Order.actual_amount), 0).label("revenue"),
+            )
+            .where(
+                Order.organization_id == organization_id,
+                Order.store_id.in_(store_ids),
+                Order.payment_status == OrderStatus.PAID,
+                Order.paid_at >= start_dt,
+                Order.paid_at <= end_dt,
+            )
+            .group_by(Order.store_id)
+        )
+        revenue_map = {r.store_id: float(r.revenue) for r in revenue_rows}
+
+        # Batch: total members per store
+        members_rows = await db.execute(
+            select(
+                Member.store_id,
+                func.count(Member.id).label("count"),
+            )
+            .where(
+                Member.organization_id == organization_id,
+                Member.store_id.in_(store_ids),
+            )
+            .group_by(Member.store_id)
+        )
+        members_map = {r.store_id: r.count for r in members_rows}
+
+        # Batch: new members per store
+        new_members_rows = await db.execute(
+            select(
+                Member.store_id,
+                func.count(Member.id).label("count"),
+            )
+            .where(
+                Member.organization_id == organization_id,
+                Member.store_id.in_(store_ids),
+                Member.created_at >= start_dt,
+                Member.created_at <= end_dt,
+            )
+            .group_by(Member.store_id)
+        )
+        new_members_map = {r.store_id: r.count for r in new_members_rows}
+
+        # Batch: bookings per store
+        bookings_rows = await db.execute(
+            select(
+                CourseSchedule.store_id,
+                func.count(Booking.id).label("count"),
+            )
+            .join(Booking, Booking.schedule_id == CourseSchedule.id)
+            .where(
+                Booking.organization_id == organization_id,
+                CourseSchedule.store_id.in_(store_ids),
+                Booking.status != BookingStatus.CANCELLED,
+                CourseSchedule.start_time >= start_dt,
+                CourseSchedule.start_time <= end_dt,
+            )
+            .group_by(CourseSchedule.store_id)
+        )
+        bookings_map = {r.store_id: r.count for r in bookings_rows}
+
+        # Batch: avg fill rate per store
+        fill_rows = await db.execute(
+            select(
+                CourseSchedule.store_id,
+                func.avg(
+                    func.cast(CourseSchedule.enrolled_count, SAFloat)
+                    / func.nullif(Course.max_attendees, 0)
+                ).label("avg_fill"),
+            )
+            .join(Course, CourseSchedule.course_id == Course.id)
+            .where(
+                CourseSchedule.organization_id == organization_id,
+                CourseSchedule.store_id.in_(store_ids),
+                CourseSchedule.start_time >= start_dt,
+                CourseSchedule.start_time <= end_dt,
+                CourseSchedule.status != "cancelled",
+            )
+            .group_by(CourseSchedule.store_id)
+        )
+        fill_map = {r.store_id: round(float(r.avg_fill or 0) * 100, 1) for r in fill_rows}
+
         results = []
         for store_id, store_name in stores:
-            # 营收
-            revenue_raw = await db.execute(
-                select(func.coalesce(func.sum(Order.actual_amount), 0))
-                .where(
-                    Order.organization_id == organization_id,
-                    Order.store_id == store_id,
-                    Order.payment_status == OrderStatus.PAID,
-                    Order.paid_at >= start_dt,
-                    Order.paid_at <= end_dt,
-                )
-            )
-            total_revenue = float(revenue_raw.scalar() or 0)
+            total_revenue = revenue_map.get(store_id, 0.0)
+            total_members = members_map.get(store_id, 0)
+            new_members = new_members_map.get(store_id, 0)
+            total_bookings = bookings_map.get(store_id, 0)
+            avg_fill_rate = fill_map.get(store_id, 0.0)
 
-            # 会员数
-            members_raw = await db.execute(
-                select(func.count(Member.id)).where(
-                    Member.organization_id == organization_id,
-                    Member.store_id == store_id,
-                )
-            )
-            total_members = members_raw.scalar() or 0
-
-            # 新增会员
-            new_members_raw = await db.execute(
-                select(func.count(Member.id)).where(
-                    Member.organization_id == organization_id,
-                    Member.store_id == store_id,
-                    Member.created_at >= start_dt,
-                    Member.created_at <= end_dt,
-                )
-            )
-            new_members = new_members_raw.scalar() or 0
-
-            # 预约数
-            bookings_raw = await db.execute(
-                select(func.count(Booking.id))
-                .join(CourseSchedule, Booking.schedule_id == CourseSchedule.id)
-                .where(
-                    Booking.organization_id == organization_id,
-                    CourseSchedule.store_id == store_id,
-                    Booking.status != BookingStatus.CANCELLED,
-                    CourseSchedule.start_time >= start_dt,
-                    CourseSchedule.start_time <= end_dt,
-                )
-            )
-            total_bookings = bookings_raw.scalar() or 0
-
-            # 平均满课率
-            fill_rows = await db.execute(
-                select(CourseSchedule.enrolled_count, Course.max_attendees)
-                .join(Course, CourseSchedule.course_id == Course.id)
-                .where(
-                    CourseSchedule.organization_id == organization_id,
-                    CourseSchedule.store_id == store_id,
-                    CourseSchedule.start_time >= start_dt,
-                    CourseSchedule.start_time <= end_dt,
-                    CourseSchedule.status != "cancelled",
-                )
-            )
-            fill_rates = []
-            for r in fill_rows:
-                if r.max_attendees and r.max_attendees > 0:
-                    fill_rates.append(r.enrolled_count / r.max_attendees * 100)
-            avg_fill_rate = round(sum(fill_rates) / len(fill_rates), 1) if fill_rates else 0.0
-
-            # 综合评分（简化加权计算）
             score = round(
-                min(total_revenue / 10000, 30)  # 营收贡献 (满分30)
-                + min(total_members / 100, 20)   # 会员规模 (满分20)
-                + min(avg_fill_rate / 100 * 25, 25)  # 满课率 (满分25)
-                + min(new_members / 50, 25),     # 新增会员 (满分25)
+                min(total_revenue / 10000, 30)
+                + min(total_members / 100, 20)
+                + min(avg_fill_rate / 100 * 25, 25)
+                + min(new_members / 50, 25),
                 1
             )
 
@@ -866,6 +911,5 @@ class AdvancedAnalyticsService:
                 "score": score,
             })
 
-        # 按综合评分降序
         results.sort(key=lambda x: x["score"], reverse=True)
         return results

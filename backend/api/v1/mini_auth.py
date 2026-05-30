@@ -71,8 +71,8 @@ async def wx_login(
         )
 
     # 更新最后登录时间
-    from datetime import datetime
-    user.last_login_at = datetime.utcnow()
+    from datetime import datetime, timezone
+    user.last_login_at = datetime.now(timezone.utc)
     await db.flush()
 
     access_token = create_access_token(
@@ -140,8 +140,8 @@ async def phone_login(
         )
 
     # 更新最后登录时间
-    from datetime import datetime
-    user.last_login_at = datetime.utcnow()
+    from datetime import datetime, timezone
+    user.last_login_at = datetime.now(timezone.utc)
     await db.flush()
 
     access_token = create_access_token(

@@ -1,7 +1,7 @@
 """
 数据库模型 - 订单
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Enum as SQLEnum, Index
 from sqlalchemy.orm import relationship
@@ -79,6 +79,6 @@ class Order(Base, TenantMixin, StoreScopeMixin):
     refunded_at = Column(DateTime, nullable=True)
 
     # 时间
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     expires_at = Column(DateTime, nullable=True)
     paid_at = Column(DateTime, nullable=True, index=True)

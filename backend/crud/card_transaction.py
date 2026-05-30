@@ -1,7 +1,7 @@
 """
 CRUD - 会员卡交易
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy import select, func
@@ -21,7 +21,7 @@ class CardTransactionCRUD:
         operator_id: Optional[int] = None,
     ) -> CardTransaction:
         old_card_type = member.card_type.value if member.card_type else None
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         if member.card_end_date and member.card_end_date > now:
             new_end = member.card_end_date + timedelta(days=req.duration_days)
@@ -98,7 +98,7 @@ class CardTransactionCRUD:
         operator_id: Optional[int] = None,
     ) -> CardTransaction:
         old_card_type = member.card_type.value if member.card_type else None
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         member.card_type = req.new_card_type
 
@@ -167,7 +167,7 @@ class CardTransactionCRUD:
         organization_id: int,
         days: int = 7,
     ) -> list[dict]:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         deadline = now + timedelta(days=days)
 
         query = (
@@ -203,7 +203,7 @@ class CardTransactionCRUD:
         skip: int = 0,
         limit: int = 20,
     ) -> tuple[list[Member], int]:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         query = (
             select(Member)
             .where(

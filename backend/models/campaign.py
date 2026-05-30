@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from sqlalchemy import (
     Column, Integer, String, Float, DateTime, Text, JSON, Enum as SQLEnum, Index,
@@ -52,5 +52,5 @@ class Campaign(Base, TenantMixin):
     converted_count = Column(Integer, default=0)
     converted_revenue = Column(Float, default=0)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

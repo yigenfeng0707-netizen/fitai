@@ -1,7 +1,7 @@
 """
 数据库模型 - 门店
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, JSON, Index
 from sqlalchemy.orm import relationship
 
@@ -39,5 +39,5 @@ class Store(Base, TenantMixin):
     longitude = Column(Float, nullable=True)
     latitude = Column(Float, nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

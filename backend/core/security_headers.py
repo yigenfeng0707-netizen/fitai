@@ -21,6 +21,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         # 启用浏览器 XSS 过滤器
         response.headers["X-XSS-Protection"] = "1; mode=block"
 
+        # 强制 HTTPS（生产环境）
+        if not request.url.scheme == "http" or request.headers.get("x-forwarded-proto") == "https":
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+
         # 控制 Referrer 信息泄露
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 

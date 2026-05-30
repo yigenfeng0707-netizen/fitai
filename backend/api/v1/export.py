@@ -1,7 +1,7 @@
 """
 API - 数据导出
 """
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -41,7 +41,7 @@ async def export_data(
 
     data = await export_fn(db, current_user.organization_id)
 
-    date_str = datetime.utcnow().strftime("%Y%m%d")
+    date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
     filename = f"{FILENAME_MAP[resource]}_{date_str}.xlsx"
 
     return StreamingResponse(

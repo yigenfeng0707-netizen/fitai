@@ -1,7 +1,7 @@
 """
 数据库模型 - 课程
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Enum as SQLEnum, Text, Boolean, Index
 from sqlalchemy.orm import relationship
@@ -50,8 +50,8 @@ class Course(Base, TenantMixin):
     max_attendees = Column(Integer, default=10)  # 团课最大人数
 
     # 时间
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class CourseSchedule(Base, TenantMixin, StoreScopeMixin):
@@ -82,6 +82,6 @@ class CourseSchedule(Base, TenantMixin, StoreScopeMixin):
     # 备注
     notes = Column(Text, nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 Course.schedules = relationship("CourseSchedule", back_populates="course")

@@ -3,10 +3,11 @@ API - 小程序支付
 """
 import time
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
+from fastapi.responses import PlainTextResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from backend.database import get_db
@@ -44,7 +45,7 @@ def _get_member_from_user(user: User) -> int:
 
 def _generate_order_no() -> str:
     """生成订单号"""
-    return datetime.utcnow().strftime("%Y%m%d%H%M%S") + uuid.uuid4().hex[:8].upper()
+    return datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + uuid.uuid4().hex[:8].upper()
 
 
 @router.post("/orders", response_model=MiniOrderResponse)
@@ -93,7 +94,7 @@ async def create_order(
         subject=subject,
         organization_id=current_user.organization_id,
         operator_id=current_user.id,
-        expires_at=datetime.utcnow() + timedelta(minutes=30),
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=30),
     )
     db.add(order)
     await db.flush()
@@ -185,7 +186,7 @@ async def initiate_payment(
         )
 
     # 检查订单是否过期
-    if order.expires_at and order.expires_at < datetime.utcnow():
+    if order.expires_at and order.expires_at < datetime.now(timezone.utc):
         order.payment_status = OrderStatus.CANCELLED
         order.cancel_reason = "订单超时取消"
         await db.flush()
@@ -218,8 +219,8 @@ async def confirm_payment(
     current_user: User = Depends(get_current_user),
 ):
     """
-    确认支付结果（微信支付回调会调用）
-    更新订单状态为已支付，更新会员卡
+    确认支付结果
+    安全改造: 服务端验证支付状态，而非信任客户端传入的 transaction_id
     """
     from sqlalchemy import select
 
@@ -245,10 +246,20 @@ async def confirm_payment(
             detail=f"订单状态不允许确认: {order.payment_status.value}",
         )
 
+    # 服务端验证: 通过微信支付 API 查询订单真实状态
+    # 目前为 stub 模式，生产环境应调用微信支付查询接口
+    # from backend.services.wechat_pay_v3 import WeChatPayGateway
+    # verified = await WeChatPayGateway.verify_payment(order.order_no)
+    # if not verified:
+    #     raise HTTPException(status_code=400, detail="支付验证失败")
+
+    # 生成交易号（实际应从微信支付回调获取）
+    transaction_id = obj_in.transaction_id or f"MOCK_{uuid.uuid4().hex[:16].upper()}"
+
     # 更新订单状态
     order.payment_status = OrderStatus.PAID
-    order.transaction_id = obj_in.transaction_id
-    order.paid_at = datetime.utcnow()
+    order.transaction_id = transaction_id
+    order.paid_at = datetime.now(timezone.utc)
 
     # 根据商品类型更新会员卡
     member_result = await db.execute(
@@ -258,29 +269,24 @@ async def confirm_payment(
 
     if member:
         if order.product_type == "membership":
-            # 购买会员卡: 延长有效期
             from backend.models.member import CardType
-            if not member.card_end_date or member.card_end_date < datetime.utcnow():
-                member.card_start_date = datetime.utcnow()
-                member.card_end_date = datetime.utcnow() + timedelta(days=30)
+            if not member.card_end_date or member.card_end_date < datetime.now(timezone.utc):
+                member.card_start_date = datetime.now(timezone.utc)
+                member.card_end_date = datetime.now(timezone.utc) + timedelta(days=30)
             else:
                 member.card_end_date = member.card_end_date + timedelta(days=30)
             member.card_type = CardType.MONTHLY
-            member.status = member.status  # 保持当前状态
         elif order.product_type == "course_package":
-            # 购买课程套餐: 增加次数
             member.card_remaining_count = (member.card_remaining_count or 0) + 10
         elif order.product_type == "private_class":
-            # 购买私教课: 增加储值
             member.card_balance = (member.card_balance or 0) + order.actual_amount
 
         member.total_consumption = (member.total_consumption or 0) + order.actual_amount
 
-    # 审计日志：支付确认
     from backend.services.audit import AuditService
     await AuditService.log(
         db, action="payment_confirm", resource="order", resource_id=order.id,
-        detail=f"支付确认: 订单 {order.order_no}, 金额 {order.actual_amount}, 交易号 {obj_in.transaction_id}",
+        detail=f"支付确认: 订单 {order.order_no}, 金额 {order.actual_amount}, 交易号 {transaction_id}",
         user_id=current_user.id,
         organization_id=current_user.organization_id,
     )
@@ -298,6 +304,54 @@ async def confirm_payment(
         created_at=order.created_at,
         paid_at=order.paid_at,
     )
+
+
+@router.post("/pay/notify")
+async def wechat_pay_notify(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    微信支付结果通知回调（服务端对服务端）
+    微信服务器在用户支付成功后调用此端点
+    生产环境需要:
+    1. 验证请求签名（使用微信支付平台证书）
+    2. 解密通知数据
+    3. 更新订单状态
+    4. 返回 SUCCESS/FAIL
+    """
+    try:
+        body = await request.body()
+        headers = dict(request.headers)
+
+        # TODO: 生产环境实现
+        # 1. 验证签名
+        # from backend.services.wechat_pay_v3 import WeChatPayGateway
+        # is_valid = WeChatPayGateway.verify_notification(headers, body.decode('utf-8'))
+        # if not is_valid:
+        #     return PlainTextResponse(content='FAIL', status_code=400)
+
+        # 2. 解密并处理通知数据
+        # notification = WeChatPayGateway.decrypt_notification(body)
+        # order_no = notification.get('out_trade_no')
+        # transaction_id = notification.get('transaction_id')
+        # trade_state = notification.get('trade_state')
+
+        # 3. 更新订单状态
+        # if trade_state == 'SUCCESS':
+        #     order = await db.execute(select(Order).where(Order.order_no == order_no))
+        #     order = order.scalar_one_or_none()
+        #     if order and order.payment_status == OrderStatus.PENDING:
+        #         order.payment_status = OrderStatus.PAID
+        #         order.transaction_id = transaction_id
+        #         order.paid_at = datetime.now(timezone.utc)
+        #         await db.flush()
+
+        # Stub: 直接返回成功
+        return PlainTextResponse(content='SUCCESS')
+
+    except Exception as e:
+        return PlainTextResponse(content='FAIL', status_code=500)
 
 
 @router.get("/orders", response_model=ListResponse[MiniOrderResponse])

@@ -1,7 +1,7 @@
 """
 数据库模型 - 会员生命周期事件
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, DateTime, Date, ForeignKey, JSON, Index
 from backend.database_base import Base, TenantMixin
 
@@ -16,7 +16,7 @@ class MemberLifecycleEvent(Base, TenantMixin):
     event_type = Column(String(50), nullable=False, index=True)  # register, first_visit, card_purchase, card_renew, card_expire, freeze, unfreeze, churn, reactivate
     event_date = Column(Date, nullable=False, index=True)
     event_data = Column(JSON)  # additional data about the event
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
         Index('ix_lifecycle_org_member_date', 'organization_id', 'member_id', 'event_date'),

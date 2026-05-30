@@ -1,7 +1,7 @@
 """
 数据库模型 - 会员卡交易记录
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Enum as SQLEnum, Text, Index
@@ -41,7 +41,7 @@ class CardTransaction(Base, TenantMixin, StoreScopeMixin):
     description = Column(Text, nullable=True)
     operator_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     order_id = Column(Integer, ForeignKey("orders.id"), nullable=True, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     member = relationship("Member", backref="card_transactions")
     operator = relationship("User")

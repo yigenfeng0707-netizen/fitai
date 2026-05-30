@@ -1,9 +1,10 @@
-import { View, Text } from '@tarojs/components'
+import { View, Text, Image } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useState } from 'react'
 import NavBar from '@/components/NavBar'
 import { useUser } from '@/store'
 import { getMyBookings, checkIn } from '@/services/booking'
+import { getCheckinQRCode } from '@/services/member'
 import { formatTime } from '@/utils/format'
 import type { BookingInfo } from '@/types'
 import './index.scss'
@@ -12,10 +13,14 @@ export default function CheckIn() {
   const { state: userState } = useUser()
   const [todayBookings, setTodayBookings] = useState<BookingInfo[]>([])
   const [checkedInIds, setCheckedInIds] = useState<Set<number>>(new Set())
+  const [qrCodeUrl, setQrCodeUrl] = useState('')
+  const [qrToken, setQrToken] = useState('')
+  const [qrExpires, setQrExpires] = useState(0)
 
   useDidShow(() => {
     if (userState.isLoggedIn) {
       loadTodayBookings()
+      loadQRCode()
     }
   })
 
@@ -29,6 +34,17 @@ export default function CheckIn() {
       setTodayBookings(res.items)
     } catch (error) {
       console.error('加载今日预约失败', error)
+    }
+  }
+
+  const loadQRCode = async () => {
+    try {
+      const data = await getCheckinQRCode()
+      setQrCodeUrl(data.qrcode)
+      setQrToken(data.token)
+      setQrExpires(data.expires_in)
+    } catch (error) {
+      console.error('加载签到码失败', error)
     }
   }
 
@@ -51,12 +67,22 @@ export default function CheckIn() {
       {/* 签到码区域 */}
       <View className="checkin-qr">
         <View className="checkin-qr__box">
-          <View className="checkin-qr__placeholder">
-            <Text className="checkin-qr__placeholder-text">签到二维码</Text>
-            <Text className="checkin-qr__placeholder-desc">到店后出示此二维码进行签到</Text>
-          </View>
+          {qrCodeUrl ? (
+            <Image
+              className="checkin-qr__image"
+              src={qrCodeUrl}
+              mode="aspectFit"
+            />
+          ) : (
+            <View className="checkin-qr__placeholder">
+              <Text className="checkin-qr__placeholder-text">加载中...</Text>
+            </View>
+          )}
         </View>
         <Text className="checkin-qr__tip">请将二维码展示给前台工作人员扫描</Text>
+        {qrExpires > 0 && (
+          <Text className="checkin-qr__expires">二维码 {Math.floor(qrExpires / 60)} 分钟内有效</Text>
+        )}
       </View>
 
       {/* 手动签到 */}

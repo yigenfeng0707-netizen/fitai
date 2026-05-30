@@ -20,3 +20,8 @@ export function getCardInfo(): Promise<CardInfo> {
 export function getBodyTestRecords(): Promise<BodyTestRecord[]> {
   return get('/api/v1/member/body-tests')
 }
+
+/** 获取签到二维码 */
+export function getCheckinQRCode(): Promise<{ qrcode: string; token: string; expires_in: number }> {
+  return get('/api/v1/mini/checkin/qrcode')
+}

@@ -1,7 +1,7 @@
 """
 数据库模型 - 消息通知
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum as SQLEnum, Text, Boolean, JSON, Index
@@ -36,7 +36,7 @@ class Notification(Base, TenantMixin):
     is_read = Column(Boolean, default=False, index=True)
     link = Column(String(500), nullable=True)
     extra_data = Column(JSON, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     read_at = Column(DateTime, nullable=True)
 
     user = relationship("User", backref="notifications")

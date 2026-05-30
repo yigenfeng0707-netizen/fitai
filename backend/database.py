@@ -3,6 +3,7 @@
 根据 APP_ENV 自动选择生产 (PostgreSQL) 或开发 (SQLite) 模式
 """
 import os
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
@@ -200,7 +201,7 @@ async def init_db():
                 await session.flush()
 
                 # 种子排期（今日到未来7天）
-                now = datetime.utcnow()
+                now = datetime.now(timezone.utc)
                 for day_offset in range(7):
                     day = now + timedelta(days=day_offset)
                     for hour in [9, 10, 14, 16, 18]:
@@ -226,7 +227,7 @@ async def init_db():
             existing_orders = await session.execute(select(Order).limit(1))
             if not existing_orders.scalar_one_or_none():
                 from backend.logger import logger
-                now = datetime.utcnow()
+                now = datetime.now(timezone.utc)
                 orders = [
                     Order(order_no=f"ORD{now.strftime('%Y%m%d')}{str(i).zfill(4)}", member_id=i + 1,
                           amount=[12800, 3200, 1500, 5000, 4800][i], discount=0,

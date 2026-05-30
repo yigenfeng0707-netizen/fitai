@@ -1,7 +1,7 @@
 """
 数据库模型 - 用户门店关联
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Index
 from sqlalchemy.orm import relationship
 
@@ -22,7 +22,7 @@ class UserStore(Base, TenantMixin):
     store_id = Column(Integer, ForeignKey("stores.id"), nullable=False)
     role_at_store = Column(String(50), nullable=True)
     is_primary = Column(Boolean, default=False)
-    joined_at = Column(DateTime, default=datetime.utcnow)
+    joined_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     user = relationship("User")
     store = relationship("Store")

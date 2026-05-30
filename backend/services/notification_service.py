@@ -57,7 +57,7 @@ class InAppChannel(NotificationChannel):
 
 
 class SMSChannel(NotificationChannel):
-    """短信通知渠道 - 当前为 stub 实现，仅记录日志"""
+    """短信通知渠道 - 支持阿里云短信 API"""
 
     async def send(self, user_id: int, title: str, content: str,
                    phone: Optional[str] = None, db: Optional[AsyncSession] = None,
@@ -67,19 +67,84 @@ class SMSChannel(NotificationChannel):
             return False
 
         try:
-            # Stub: 真实实现需调用短信服务商 API（阿里云/腾讯云）
-            logger.info(
-                f"SMSChannel: [STUB] would send SMS to user {user_id} "
-                f"(phone={phone or 'N/A'}): title={title}, content={content}"
-            )
-            return True
+            # 获取会员手机号
+            if not phone and db:
+                from sqlalchemy import select
+                from backend.models.member import Member
+                result = await db.execute(
+                    select(Member.phone).where(Member.id == user_id)
+                )
+                phone = result.scalar_one_or_none()
+
+            if not phone:
+                logger.warning(f"SMSChannel: no phone number for user {user_id}")
+                return False
+
+            # 阿里云短信 API
+            import httpx
+            import hashlib
+            import hmac
+            import base64
+            import urllib.parse
+            import time
+            import uuid
+
+            access_key = getattr(settings, 'SMS_ACCESS_KEY', '')
+            access_secret = getattr(settings, 'SMS_ACCESS_SECRET', '')
+            sign_name = getattr(settings, 'SMS_SIGN_NAME', '')
+            template_code = getattr(settings, 'SMS_TEMPLATE_CODE', '')
+            sms_endpoint = "https://dysmsapi.aliyuncs.com"
+
+            if not all([access_key, access_secret, sign_name, template_code]):
+                logger.warning("SMSChannel: SMS credentials not configured")
+                return False
+
+            # 构建阿里云 API 签名
+            params = {
+                "PhoneNumbers": phone,
+                "SignName": sign_name,
+                "TemplateCode": template_code,
+                "TemplateParam": f'{{"content":"{content}"}}',
+                "AccessKeyId": access_key,
+                "SignatureMethod": "HMAC-SHA1",
+                "SignatureNonce": str(uuid.uuid4()),
+                "SignatureVersion": "1.0",
+                "Timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "Format": "JSON",
+                "Action": "SendSms",
+                "Version": "2017-05-25",
+            }
+
+            # 排序并签名
+            sorted_params = sorted(params.items())
+            canonical_query = urllib.parse.urlencode(sorted_params)
+            string_to_sign = f"GET&%2F&{urllib.parse.quote(canonical_query, safe='')}"
+            signature = base64.b64encode(
+                hmac.new(
+                    (access_secret + "&").encode(),
+                    string_to_sign.encode(),
+                    hashlib.sha1
+                ).digest()
+            ).decode()
+            params["Signature"] = signature
+
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(sms_endpoint, params=params)
+                result = response.json()
+                if result.get("Code") == "OK":
+                    logger.info(f"SMSChannel: SMS sent to {phone} for user {user_id}")
+                    return True
+                else:
+                    logger.error(f"SMSChannel: API error {result.get('Code')}: {result.get('Message')}")
+                    return False
+
         except Exception as e:
             logger.error(f"SMSChannel: failed to send SMS to user {user_id}: {e}")
             return False
 
 
 class WeChatWorkChannel(NotificationChannel):
-    """企业微信通知渠道 - 当前为 stub 实现，仅记录日志"""
+    """企业微信通知渠道 - 支持企业微信 API"""
 
     async def send(self, user_id: int, title: str, content: str,
                    db: Optional[AsyncSession] = None, organization_id: int = 1,
@@ -89,12 +154,48 @@ class WeChatWorkChannel(NotificationChannel):
             return False
 
         try:
-            # Stub: 真实实现需调用企业微信 API
-            logger.info(
-                f"WeChatWorkChannel: [STUB] would send WeChat Work message "
-                f"to user {user_id}: title={title}, content={content}"
-            )
-            return True
+            corp_id = getattr(settings, 'WECHAT_WORK_CORP_ID', '')
+            agent_id = getattr(settings, 'WECHAT_WORK_AGENT_ID', '')
+            secret = getattr(settings, 'WECHAT_WORK_SECRET', '')
+
+            if not all([corp_id, agent_id, secret]):
+                logger.warning("WeChatWorkChannel: WeChat Work credentials not configured")
+                return False
+
+            # 获取 access_token
+            import httpx
+            token_url = f"https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid={corp_id}&corpsecret={secret}"
+
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                token_resp = await client.get(token_url)
+                token_data = token_resp.json()
+                if token_data.get("errcode") != 0:
+                    logger.error(f"WeChatWorkChannel: token error {token_data.get('errmsg')}")
+                    return False
+
+                access_token = token_data["access_token"]
+
+                # 发送应用消息
+                # 需要用户在企业微信中的 userid，这里用 user_id 作为占位
+                send_url = f"https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token={access_token}"
+                payload = {
+                    "touser": str(user_id),
+                    "msgtype": "text",
+                    "agentid": int(agent_id),
+                    "text": {
+                        "content": f"{title}\n{content}" if title else content,
+                    },
+                }
+
+                send_resp = await client.post(send_url, json=payload)
+                send_data = send_resp.json()
+                if send_data.get("errcode") == 0:
+                    logger.info(f"WeChatWorkChannel: message sent to user {user_id}")
+                    return True
+                else:
+                    logger.error(f"WeChatWorkChannel: send error {send_data.get('errmsg')}")
+                    return False
+
         except Exception as e:
             logger.error(f"WeChatWorkChannel: failed to send to user {user_id}: {e}")
             return False

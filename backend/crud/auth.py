@@ -80,7 +80,7 @@ class UserCRUD:
     @staticmethod
     async def update_last_login(db: AsyncSession, user: User) -> User:
         """更新最后登录时间"""
-        from datetime import datetime
-        user.last_login_at = datetime.utcnow()
+        from datetime import datetime, timezone
+        user.last_login_at = datetime.now(timezone.utc)
         await db.flush()
         return user

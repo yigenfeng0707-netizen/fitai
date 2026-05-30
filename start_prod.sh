@@ -8,7 +8,7 @@ echo "Waiting for PostgreSQL..."
 for i in $(seq 1 30); do
   if python -c "
 import psycopg2
-conn = psycopg2.connect('$DATABASE_URL'.replace('postgresql://','postgresql://').split('/')[-1] or '')
+conn = psycopg2.connect('$DATABASE_URL')
 conn.close()
 " 2>/dev/null; then
     echo "PostgreSQL is ready!"

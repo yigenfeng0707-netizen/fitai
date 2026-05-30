@@ -1,15 +1,17 @@
 """
-速率限制中间件
+速率限制中间件 - Redis 版本
+支持多 worker/容器部署
 - 通用 API: 100 请求/分钟/IP
 - 认证端点: 5 请求/分钟/IP
 """
 import time
-from collections import defaultdict
 from typing import Optional
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
+
+from backend.config import settings
 
 # ── 限流规则 ──
 AUTH_PATH_PREFIXES = (
@@ -21,11 +23,25 @@ AUTH_PATH_PREFIXES = (
 GENERAL_LIMIT = 100       # 请求/分钟
 AUTH_LIMIT = 5            # 请求/分钟
 WINDOW_SECONDS = 60       # 滑动窗口（秒）
-PRUNE_INTERVAL = 120      # 清理间隔（秒）
 
-# ── 内存存储: {ip: {endpoint_prefix: [(timestamp, ...)]}} ──
-_requests: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
-_last_prune: float = 0.0
+# ── Redis 连接 ──
+_redis_client = None
+
+
+def _get_redis():
+    """获取 Redis 客户端（延迟初始化）"""
+    global _redis_client
+    if _redis_client is None:
+        try:
+            import redis
+            redis_url = settings.REDIS_URL or "redis://localhost:6379/1"
+            _redis_client = redis.from_url(redis_url, decode_responses=True)
+            _redis_client.ping()
+        except Exception:
+            # Redis 不可用时降级为内存模式
+            _redis_client = False
+            return None
+    return _redis_client if _redis_client is not False else None
 
 
 def _get_client_ip(request: Request) -> str:
@@ -49,20 +65,42 @@ def _classify_path(path: str) -> str:
     return "general"
 
 
-def _prune_stale(now: float) -> None:
-    """清理过期记录，防止内存泄漏"""
-    global _last_prune
-    if now - _last_prune < PRUNE_INTERVAL:
-        return
-    _last_prune = now
+# ── 内存降级存储 ──
+_memory_store: dict[str, dict[str, list[float]]] = {}
+
+
+def _is_rate_limited_memory(ip: str, path: str) -> Optional[int]:
+    """内存模式限流检查"""
+    from collections import defaultdict
+    now = time.monotonic()
     cutoff = now - WINDOW_SECONDS
-    for ip in list(_requests.keys()):
-        for bucket in list(_requests[ip].keys()):
-            _requests[ip][bucket] = [
-                ts for ts in _requests[ip][bucket] if ts > cutoff
-            ]
-        if not any(_requests[ip].values()):
-            del _requests[ip]
+
+    bucket = _classify_path(path)
+    limit = AUTH_LIMIT if bucket == "auth" else GENERAL_LIMIT
+
+    if ip not in _memory_store:
+        _memory_store[ip] = {}
+    if bucket not in _memory_store[ip]:
+        _memory_store[ip][bucket] = []
+
+    timestamps = _memory_store[ip][bucket]
+    _memory_store[ip][bucket] = timestamps = [ts for ts in timestamps if ts > cutoff]
+
+    if len(timestamps) >= limit:
+        wait = timestamps[0] - cutoff
+        return int(wait) + 1
+    return None
+
+
+def _record_request_memory(ip: str, path: str) -> None:
+    """内存模式记录请求"""
+    now = time.monotonic()
+    bucket = _classify_path(path)
+    if ip not in _memory_store:
+        _memory_store[ip] = {}
+    if bucket not in _memory_store[ip]:
+        _memory_store[ip][bucket] = []
+    _memory_store[ip][bucket].append(now)
 
 
 def is_rate_limited(ip: str, path: str) -> Optional[int]:
@@ -70,28 +108,53 @@ def is_rate_limited(ip: str, path: str) -> Optional[int]:
     检查是否被限流。
     返回 None 表示通过，返回 int 表示剩余秒数（需等待）。
     """
-    now = time.monotonic()
-    _prune_stale(now)
-    cutoff = now - WINDOW_SECONDS
+    redis = _get_redis()
 
-    bucket = _classify_path(path)
-    limit = AUTH_LIMIT if bucket == "auth" else GENERAL_LIMIT
+    if redis is None:
+        return _is_rate_limited_memory(ip, path)
 
-    timestamps = _requests[ip][bucket]
-    # 只保留窗口内的记录
-    _requests[ip][bucket] = timestamps = [ts for ts in timestamps if ts > cutoff]
+    try:
+        bucket = _classify_path(path)
+        limit = AUTH_LIMIT if bucket == "auth" else GENERAL_LIMIT
+        key = f"ratelimit:{ip}:{bucket}"
+        now = time.time()
+        cutoff = now - WINDOW_SECONDS
 
-    if len(timestamps) >= limit:
-        # 计算需要等待的秒数
-        wait = timestamps[0] - cutoff
-        return int(wait) + 1
-    return None
+        pipe = redis.pipeline()
+        pipe.zremrangebyscore(key, 0, cutoff)
+        pipe.zadd(key, {str(now): now})
+        pipe.zcard(key)
+        pipe.expire(key, WINDOW_SECONDS + 10)
+        results = pipe.execute()
+
+        request_count = results[2]
+
+        if request_count >= limit:
+            oldest = redis.zrange(key, 0, 0, withscores=True)
+            if oldest:
+                wait = oldest[0][1] - cutoff
+                return int(wait) + 1
+        return None
+    except Exception:
+        return _is_rate_limited_memory(ip, path)
 
 
 def record_request(ip: str, path: str) -> None:
     """记录一次请求"""
-    bucket = _classify_path(path)
-    _requests[ip][bucket].append(time.monotonic())
+    redis = _get_redis()
+
+    if redis is None:
+        _record_request_memory(ip, path)
+        return
+
+    try:
+        bucket = _classify_path(path)
+        key = f"ratelimit:{ip}:{bucket}"
+        now = time.time()
+        redis.zadd(key, {str(now): now})
+        redis.expire(key, WINDOW_SECONDS + 10)
+    except Exception:
+        _record_request_memory(ip, path)
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):

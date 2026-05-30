@@ -3,7 +3,7 @@ export interface User {
   id: number
   username: string
   email?: string
-  role: 'super_admin' | 'store_owner' | 'coach' | 'reception'
+  role: 'super_admin' | 'store_owner' | 'coach' | 'receptionist'
   is_active: boolean
   created_at: string
 }

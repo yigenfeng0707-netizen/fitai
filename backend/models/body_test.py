@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey, JSON, Text, Index
 from sqlalchemy.orm import relationship
 
@@ -34,4 +34,4 @@ class BodyTestRecord(Base, TenantMixin):
 
     member = relationship("Member", back_populates="body_test_records")
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

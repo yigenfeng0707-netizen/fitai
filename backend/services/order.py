@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy import select
@@ -12,7 +12,7 @@ from backend.services.payment import payment_service
 class OrderService:
     @staticmethod
     def _generate_order_no() -> str:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         return f"ORD{now.strftime('%Y%m%d%H%M%S%f')[:20]}"
 
     @staticmethod
@@ -35,7 +35,7 @@ class OrderService:
             operator_id=operator_id,
             notes=obj_in.notes,
             payment_status=OrderStatus.PENDING,
-            expires_at=datetime.utcnow() + timedelta(minutes=30),
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=30),
         )
         db.add(order)
         await db.flush()
@@ -61,7 +61,7 @@ class OrderService:
         order.payment_method = payment_method
         order.transaction_id = transaction_id
         order.payment_status = OrderStatus.PAID
-        order.paid_at = datetime.utcnow()
+        order.paid_at = datetime.now(timezone.utc)
         await db.flush()
         return order
 
@@ -89,7 +89,7 @@ class OrderService:
             if not result.success:
                 return order
         order.refund_amount = amount
-        order.refunded_at = datetime.utcnow()
+        order.refunded_at = datetime.now(timezone.utc)
         order.cancel_reason = reason
         if amount >= order.actual_amount:
             order.payment_status = OrderStatus.REFUNDED
@@ -126,7 +126,7 @@ class OrderService:
     @staticmethod
     async def expire_pending_orders(db: AsyncSession) -> list[Order]:
         """Cancel orders past their expiration time."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         result = await db.execute(
             select(Order).where(
                 Order.payment_status == OrderStatus.PENDING,

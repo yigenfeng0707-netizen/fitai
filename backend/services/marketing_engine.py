@@ -1,7 +1,7 @@
 """
 营销规则引擎 - Trigger -> Condition -> Action 模式
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import select
@@ -101,7 +101,7 @@ class MarketingEngine:
                         db, rule, entity_data, [entity_id],
                     )
                     rule.execution_count = (rule.execution_count or 0) + 1
-                    rule.last_executed_at = datetime.utcnow()
+                    rule.last_executed_at = datetime.now(timezone.utc)
 
                     log = AutomationLog(
                         rule_id=rule.id,
@@ -298,21 +298,107 @@ class MarketingEngine:
                     executed.append({"type": "add_tag", "status": "success", "tags": tags})
 
                 elif action_type == "issue_coupon":
+                    # 发放优惠券给会员
+                    from backend.models.coupon import Coupon
+                    member_id = entity_data.get("id")
+                    if member_id:
+                        coupon_code = params.get("code", f"MKT{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}")
+                        coupon = Coupon(
+                            code=coupon_code,
+                            name=params.get("name", "营销优惠券"),
+                            discount_type=params.get("discount_type", "fixed"),
+                            discount_value=params.get("discount_value", 10),
+                            min_amount=params.get("min_amount", 0),
+                            valid_days=params.get("valid_days", 30),
+                            total_count=params.get("total_count", 1),
+                            used_count=0,
+                            organization_id=rule.organization_id,
+                            is_active=True,
+                        )
+                        db.add(coupon)
+                        logger.info("Issued coupon %s to member %s", coupon_code, member_id)
                     executed.append({"type": "issue_coupon", "status": "success", "params": params})
 
                 elif action_type == "send_sms":
+                    # 发送短信通知
+                    phone = entity_data.get("phone")
+                    if phone:
+                        from backend.services.notification_service import notification_dispatcher
+                        member_id = entity_data.get("id")
+                        if member_id:
+                            await notification_dispatcher.send(
+                                channels=["sms"],
+                                user_id=member_id,
+                                title="",
+                                content=params.get("content", ""),
+                                organization_id=rule.organization_id,
+                            )
+                            logger.info("Sent SMS to member %s", member_id)
                     executed.append({"type": "send_sms", "status": "success", "params": params})
 
                 elif action_type == "send_wechat":
+                    # 发送企业微信消息
+                    member_id = entity_data.get("id")
+                    if member_id:
+                        from backend.services.notification_service import notification_dispatcher
+                        await notification_dispatcher.send(
+                            channels=["wechat_work"],
+                            user_id=member_id,
+                            title=params.get("title", ""),
+                            content=params.get("content", ""),
+                            organization_id=rule.organization_id,
+                        )
+                        logger.info("Sent WeChat Work message to member %s", member_id)
                     executed.append({"type": "send_wechat", "status": "success", "params": params})
 
                 elif action_type == "create_task":
+                    # 创建待办任务（作为通知记录）
+                    member_id = entity_data.get("id")
+                    if member_id:
+                        task_notification = Notification(
+                            user_id=member_id,
+                            notification_type=NotificationType.SYSTEM,
+                            title=params.get("title", "营销任务"),
+                            content=params.get("content", ""),
+                            organization_id=rule.organization_id,
+                        )
+                        db.add(task_notification)
+                        logger.info("Created task for member %s", member_id)
                     executed.append({"type": "create_task", "status": "success", "params": params})
 
                 elif action_type == "trigger_webhook":
+                    # 触发外部 Webhook
+                    import httpx
+                    webhook_url = params.get("url")
+                    if webhook_url:
+                        try:
+                            async with httpx.AsyncClient(timeout=10.0) as client:
+                                payload = {
+                                    "event": "marketing_rule_executed",
+                                    "rule_id": rule.id,
+                                    "rule_name": rule.name,
+                                    "entity_data": entity_data,
+                                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                                }
+                                response = await client.post(webhook_url, json=payload)
+                                logger.info("Webhook triggered: %s, status: %s", webhook_url, response.status_code)
+                        except Exception as e:
+                            logger.warning("Webhook failed: %s, error: %s", webhook_url, str(e))
                     executed.append({"type": "trigger_webhook", "status": "success", "params": params})
 
                 elif action_type == "update_field":
+                    # 更新会员字段
+                    field = params.get("field")
+                    value = params.get("value")
+                    member_id = entity_data.get("id")
+                    if field and value is not None and member_id:
+                        member_result = await db.execute(
+                            select(Member).where(Member.id == member_id)
+                        )
+                        member = member_result.scalar_one_or_none()
+                        if member and hasattr(member, field):
+                            setattr(member, field, value)
+                            logger.info("Updated member %s field %s to %s", member_id, field, value)
                     executed.append({"type": "update_field", "status": "success", "params": params})
 
                 else:
@@ -327,7 +413,7 @@ class MarketingEngine:
     @staticmethod
     async def check_scheduled_triggers(db: AsyncSession, organization_id: int) -> dict:
         """检查定时触发器（生日、到期、未到店等）"""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         results = {"birthday": 0, "card_expiring": 0, "inactive": 0}
 
         # Birthday

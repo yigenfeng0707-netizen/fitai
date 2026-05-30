@@ -63,7 +63,7 @@ async def migrate():
             UPDATE card_transactions SET store_id = (
                 SELECT s.id FROM stores s WHERE s.organization_id = card_transactions.organization_id AND s.code = 'DEFAULT'
             ) WHERE store_id IS NULL
-        """)
+        """))
 
         print("Migration completed successfully!")
 

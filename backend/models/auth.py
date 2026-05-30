@@ -1,7 +1,7 @@
 """
 数据库模型 - 认证
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, JSON, Text, Index
 from sqlalchemy.orm import relationship
 
@@ -35,8 +35,8 @@ class User(Base, TenantMixin):
     last_login_at = Column(DateTime, nullable=True)
 
     # 时间
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     # 关联
     orders = relationship("Order", back_populates="operator")
@@ -62,7 +62,7 @@ class AuditLog(Base, TenantMixin):
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(String(200), nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
 
 
 class ApiKey(Base, TenantMixin):
@@ -80,5 +80,5 @@ class ApiKey(Base, TenantMixin):
     last_used_at = Column(DateTime, nullable=True)
     revoked_at = Column(DateTime, nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

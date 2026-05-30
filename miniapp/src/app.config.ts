@@ -6,6 +6,9 @@ export default defineAppConfig({
     'pages/booking/index',
     'pages/profile/index',
     'pages/checkin/index',
+    'pages/profile/body-test/index',
+    'pages/profile/orders/index',
+    'pages/profile/settings/index',
   ],
   window: {
     backgroundTextStyle: 'light',

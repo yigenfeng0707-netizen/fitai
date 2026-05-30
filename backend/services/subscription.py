@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy import select
@@ -27,7 +27,7 @@ class SubscriptionService:
         order_id: Optional[int] = None,
         auto_renew: bool = False,
     ) -> Subscription:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         sub = Subscription(
             organization_id=organization.id,
             plan=plan.value,
@@ -72,7 +72,7 @@ class SubscriptionService:
         order_id: Optional[int] = None,
     ) -> Subscription:
         """Extend an existing subscription."""
-        base = subscription.end_date if subscription.end_date and subscription.end_date > datetime.utcnow() else datetime.utcnow()
+        base = subscription.end_date if subscription.end_date and subscription.end_date > datetime.now(timezone.utc) else datetime.now(timezone.utc)
         subscription.end_date = base + timedelta(days=30 * duration_months)
         subscription.amount = amount or PLAN_PRICES.get(subscription.plan, 0)
         subscription.actual_amount = amount or PLAN_PRICES.get(subscription.plan, 0)
@@ -101,7 +101,7 @@ class SubscriptionService:
         subscription.order_id = order_id
 
         if duration_months > 0:
-            base = subscription.end_date if subscription.end_date and subscription.end_date > datetime.utcnow() else datetime.utcnow()
+            base = subscription.end_date if subscription.end_date and subscription.end_date > datetime.now(timezone.utc) else datetime.now(timezone.utc)
             subscription.end_date = base + timedelta(days=30 * duration_months)
 
         if subscription.status != SubscriptionStatus.ACTIVE:
@@ -121,7 +121,7 @@ class SubscriptionService:
 
     @staticmethod
     async def check_expired(db: AsyncSession) -> list[Subscription]:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         result = await db.execute(
             select(Subscription).where(
                 Subscription.status == SubscriptionStatus.ACTIVE,

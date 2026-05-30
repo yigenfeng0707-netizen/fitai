@@ -1,7 +1,7 @@
 """
 数据库模型 - 会员
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Enum as SQLEnum, Text, JSON, Index
 from sqlalchemy.orm import relationship
@@ -72,5 +72,5 @@ class Member(Base, TenantMixin, StoreScopeMixin):
     orders = relationship("Order", back_populates="member")
 
     # 时间
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

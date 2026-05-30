@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, Text, Index
 from backend.database_base import Base, TenantMixin
@@ -31,8 +31,8 @@ class Coupon(TenantMixin, Base):
 
     is_active = Column(Boolean, default=True, index=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class CouponUsage(TenantMixin, Base):
@@ -50,4 +50,4 @@ class CouponUsage(TenantMixin, Base):
 
     discount_amount = Column(Float, default=0.0)
 
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

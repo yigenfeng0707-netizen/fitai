@@ -1,7 +1,7 @@
 """
 数据库模型 - 每日统计汇总
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Float, DateTime, Date, ForeignKey, JSON, Index
 from backend.database_base import Base, TenantMixin
 
@@ -46,8 +46,8 @@ class DailyStats(Base, TenantMixin):
     active_coaches = Column(Integer, default=0)  # 活跃教练数
     total_teaching_hours = Column(Float, default=0)  # 总教学时长
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (
         Index('ix_daily_stats_org_date_store', 'organization_id', 'stat_date', 'store_id', unique=True),
