@@ -21,7 +21,7 @@ class CardTransactionCRUD:
         operator_id: Optional[int] = None,
     ) -> CardTransaction:
         old_card_type = member.card_type.value if member.card_type else None
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         if member.card_end_date and member.card_end_date > now:
             new_end = member.card_end_date + timedelta(days=req.duration_days)
@@ -98,7 +98,7 @@ class CardTransactionCRUD:
         operator_id: Optional[int] = None,
     ) -> CardTransaction:
         old_card_type = member.card_type.value if member.card_type else None
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         member.card_type = req.new_card_type
 
@@ -167,7 +167,7 @@ class CardTransactionCRUD:
         organization_id: int,
         days: int = 7,
     ) -> list[dict]:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         deadline = now + timedelta(days=days)
 
         query = (
@@ -203,7 +203,7 @@ class CardTransactionCRUD:
         skip: int = 0,
         limit: int = 20,
     ) -> tuple[list[Member], int]:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         query = (
             select(Member)
             .where(

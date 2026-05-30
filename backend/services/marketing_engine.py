@@ -101,7 +101,7 @@ class MarketingEngine:
                         db, rule, entity_data, [entity_id],
                     )
                     rule.execution_count = (rule.execution_count or 0) + 1
-                    rule.last_executed_at = datetime.now(timezone.utc)
+                    rule.last_executed_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
                     log = AutomationLog(
                         rule_id=rule.id,
@@ -302,7 +302,7 @@ class MarketingEngine:
                     from backend.models.coupon import Coupon
                     member_id = entity_data.get("id")
                     if member_id:
-                        coupon_code = params.get("code", f"MKT{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}")
+                        coupon_code = params.get("code", f"MKT{datetime.now(timezone.utc).replace(tzinfo=None).strftime('%Y%m%d%H%M%S')}")
                         coupon = Coupon(
                             code=coupon_code,
                             name=params.get("name", "营销优惠券"),
@@ -378,7 +378,7 @@ class MarketingEngine:
                                     "rule_id": rule.id,
                                     "rule_name": rule.name,
                                     "entity_data": entity_data,
-                                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                                    "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
                                 }
                                 response = await client.post(webhook_url, json=payload)
                                 logger.info("Webhook triggered: %s, status: %s", webhook_url, response.status_code)
@@ -413,7 +413,7 @@ class MarketingEngine:
     @staticmethod
     async def check_scheduled_triggers(db: AsyncSession, organization_id: int) -> dict:
         """检查定时触发器（生日、到期、未到店等）"""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         results = {"birthday": 0, "card_expiring": 0, "inactive": 0}
 
         # Birthday

@@ -42,7 +42,7 @@ async def get_today_bookings(
     """获取今日预约"""
     from backend.crud.booking import BookingCRUD
     from datetime import datetime, timezone
-    bookings = await BookingCRUD.get_today_bookings(db, datetime.now(timezone.utc), organization_id=current_user.organization_id)
+    bookings = await BookingCRUD.get_today_bookings(db, datetime.now(timezone.utc).replace(tzinfo=None), organization_id=current_user.organization_id)
     
     return ListResponse(
         data=bookings,
@@ -149,7 +149,7 @@ async def get_checkin_today(
     """获取今日签到数据（含会员名、课程名，按排期分组）"""
     from backend.crud.booking import BookingCRUD
     from datetime import datetime, timezone
-    stats = await BookingCRUD.get_today_stats(db, datetime.now(timezone.utc), organization_id=current_user.organization_id)
+    stats = await BookingCRUD.get_today_stats(db, datetime.now(timezone.utc).replace(tzinfo=None), organization_id=current_user.organization_id)
     return stats
 
 

@@ -45,7 +45,7 @@ def _get_member_from_user(user: User) -> int:
 
 def _generate_order_no() -> str:
     """生成订单号"""
-    return datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S") + uuid.uuid4().hex[:8].upper()
+    return datetime.now(timezone.utc).replace(tzinfo=None).replace(tzinfo=None).strftime("%Y%m%d%H%M%S") + uuid.uuid4().hex[:8].upper()
 
 
 @router.post("/orders", response_model=MiniOrderResponse)
@@ -94,7 +94,7 @@ async def create_order(
         subject=subject,
         organization_id=current_user.organization_id,
         operator_id=current_user.id,
-        expires_at=datetime.now(timezone.utc) + timedelta(minutes=30),
+        expires_at=datetime.now(timezone.utc).replace(tzinfo=None).replace(tzinfo=None) + timedelta(minutes=30),
     )
     db.add(order)
     await db.flush()
@@ -186,7 +186,7 @@ async def initiate_payment(
         )
 
     # 检查订单是否过期
-    if order.expires_at and order.expires_at < datetime.now(timezone.utc):
+    if order.expires_at and order.expires_at < datetime.now(timezone.utc).replace(tzinfo=None).replace(tzinfo=None):
         order.payment_status = OrderStatus.CANCELLED
         order.cancel_reason = "订单超时取消"
         await db.flush()
@@ -259,7 +259,7 @@ async def confirm_payment(
     # 更新订单状态
     order.payment_status = OrderStatus.PAID
     order.transaction_id = transaction_id
-    order.paid_at = datetime.now(timezone.utc)
+    order.paid_at = datetime.now(timezone.utc).replace(tzinfo=None).replace(tzinfo=None)
 
     # 根据商品类型更新会员卡
     member_result = await db.execute(
@@ -270,9 +270,9 @@ async def confirm_payment(
     if member:
         if order.product_type == "membership":
             from backend.models.member import CardType
-            if not member.card_end_date or member.card_end_date < datetime.now(timezone.utc):
-                member.card_start_date = datetime.now(timezone.utc)
-                member.card_end_date = datetime.now(timezone.utc) + timedelta(days=30)
+            if not member.card_end_date or member.card_end_date < datetime.now(timezone.utc).replace(tzinfo=None).replace(tzinfo=None):
+                member.card_start_date = datetime.now(timezone.utc).replace(tzinfo=None).replace(tzinfo=None)
+                member.card_end_date = datetime.now(timezone.utc).replace(tzinfo=None).replace(tzinfo=None) + timedelta(days=30)
             else:
                 member.card_end_date = member.card_end_date + timedelta(days=30)
             member.card_type = CardType.MONTHLY
@@ -344,7 +344,7 @@ async def wechat_pay_notify(
         #     if order and order.payment_status == OrderStatus.PENDING:
         #         order.payment_status = OrderStatus.PAID
         #         order.transaction_id = transaction_id
-        #         order.paid_at = datetime.now(timezone.utc)
+        #         order.paid_at = datetime.now(timezone.utc).replace(tzinfo=None).replace(tzinfo=None)
         #         await db.flush()
 
         # Stub: 直接返回成功

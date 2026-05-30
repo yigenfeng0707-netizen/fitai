@@ -79,6 +79,6 @@ class Order(Base, TenantMixin, StoreScopeMixin):
     refunded_at = Column(DateTime, nullable=True)
 
     # 时间
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     expires_at = Column(DateTime, nullable=True)
     paid_at = Column(DateTime, nullable=True, index=True)

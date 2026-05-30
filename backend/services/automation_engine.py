@@ -50,7 +50,7 @@ class AutomationEngine:
                 )
 
             rule.execution_count = (rule.execution_count or 0) + 1
-            rule.last_executed_at = datetime.now(timezone.utc)
+            rule.last_executed_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
             await AutomationCRUD.log_execution(
                 db, rule.id, rule.organization_id,
@@ -155,7 +155,7 @@ class AutomationEngine:
 
     @staticmethod
     async def check_time_based_triggers(db: AsyncSession, organization_id: int) -> list[dict]:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         results = []
 
         birthday_rules = await AutomationCRUD.get_active_by_trigger(

@@ -107,7 +107,7 @@ class NotificationCRUD:
         notification = result.scalar_one_or_none()
         if notification and not notification.is_read:
             notification.is_read = True
-            notification.read_at = datetime.now(timezone.utc)
+            notification.read_at = datetime.now(timezone.utc).replace(tzinfo=None)
             await db.flush()
         return notification
 
@@ -120,7 +120,7 @@ class NotificationCRUD:
                 Notification.organization_id == organization_id,
                 Notification.is_read.is_(False),
             )
-            .values(is_read=True, read_at=datetime.now(timezone.utc))
+            .values(is_read=True, read_at=datetime.now(timezone.utc).replace(tzinfo=None))
         )
         await db.flush()
         return result.rowcount

@@ -806,7 +806,7 @@ class ETLService:
         - 流失原因分布
         - 高风险会员列表
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         # 总体流失率
         total_members_result = await db.execute(

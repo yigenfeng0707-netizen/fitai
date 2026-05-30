@@ -76,7 +76,7 @@ class DashboardService:
         """
         高管仪表盘 - 一屏概览所有关键指标
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         thirty_days_ago = today_start - timedelta(days=29)
         month_start = today_start.replace(day=1)
@@ -425,7 +425,7 @@ class DashboardService:
         """
         门店仪表盘 - 单门店详情
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         thirty_days_ago = today_start - timedelta(days=29)
 
@@ -751,7 +751,7 @@ class DashboardService:
         """
         实时数据 - 当前营业状态
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
         # ========== 今日统计 ==========
@@ -892,7 +892,7 @@ class DashboardService:
         """
         同比分析 - 今年 vs 去年
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         current_year = now.year
         prev_year = current_year - 1
 
@@ -1013,7 +1013,7 @@ class DashboardService:
         - 异常营收波动
         - 课程满课率过低
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         alerts = []
 
         # ========== 即将到期的会员卡 (30天内) ==========

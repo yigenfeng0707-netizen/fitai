@@ -42,18 +42,18 @@ class MemberCRUD:
         # 初始化卡信息
         if obj_in.initial_card_type == CardType.SINGLE and obj_in.initial_card_count:
             card_remaining_count = obj_in.initial_card_count
-            card_start_date = datetime.now(timezone.utc)
+            card_start_date = datetime.now(timezone.utc).replace(tzinfo=None)
         elif obj_in.initial_card_type == CardType.STORED and obj_in.initial_card_balance:
             card_balance = obj_in.initial_card_balance
-            card_start_date = datetime.now(timezone.utc)
+            card_start_date = datetime.now(timezone.utc).replace(tzinfo=None)
         elif obj_in.initial_card_type in [CardType.MONTHLY, CardType.QUARTERLY, CardType.YEARLY]:
-            card_start_date = datetime.now(timezone.utc)
+            card_start_date = datetime.now(timezone.utc).replace(tzinfo=None)
             duration_days = {
                 CardType.MONTHLY: 30,
                 CardType.QUARTERLY: 90,
                 CardType.YEARLY: 365,
             }
-            card_end_date = datetime.now(timezone.utc) + timedelta(days=duration_days[obj_in.initial_card_type])
+            card_end_date = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=duration_days[obj_in.initial_card_type])
         
         member = Member(
             name=obj_in.name,

@@ -22,7 +22,7 @@ class UserStore(Base, TenantMixin):
     store_id = Column(Integer, ForeignKey("stores.id"), nullable=False)
     role_at_store = Column(String(50), nullable=True)
     is_primary = Column(Boolean, default=False)
-    joined_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    joined_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     user = relationship("User")
     store = relationship("Store")

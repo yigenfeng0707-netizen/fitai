@@ -173,7 +173,7 @@ class AIService:
         db: AsyncSession,
         organization_id: int,
     ) -> dict:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 

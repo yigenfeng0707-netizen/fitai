@@ -41,7 +41,7 @@ class CardTransaction(Base, TenantMixin, StoreScopeMixin):
     description = Column(Text, nullable=True)
     operator_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     order_id = Column(Integer, ForeignKey("orders.id"), nullable=True, index=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     member = relationship("Member", backref="card_transactions")
     operator = relationship("User")

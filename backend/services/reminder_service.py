@@ -29,7 +29,7 @@ class ReminderService:
         - 查找 birthday 在未来 days_ahead 天内的活跃会员
         - 返回匹配的会员列表
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         end = now + timedelta(days=days_ahead)
 
         # Filter in SQL: compute this-year and next-year birthday candidates
@@ -99,7 +99,7 @@ class ReminderService:
         - 查找 card_end_date 在未来 days_ahead 天内的活跃会员
         - 返回匹配的会员列表
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         end = now + timedelta(days=days_ahead)
 
         result = await db.execute(
@@ -138,7 +138,7 @@ class ReminderService:
         - 查找 card_end_date 在过去 days_after 天内且状态仍为 active 的会员
         - 返回匹配的会员列表
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         start = now - timedelta(days=days_after)
 
         result = await db.execute(
@@ -177,7 +177,7 @@ class ReminderService:
         - 查找最近 no_visit_days 天内没有预约/签到记录的活跃会员
         - 返回匹配的会员列表
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         cutoff = now - timedelta(days=no_visit_days)
 
         # Batch: get all active members with their recent booking count and last visit

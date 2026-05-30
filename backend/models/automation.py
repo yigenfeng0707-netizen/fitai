@@ -37,8 +37,8 @@ class AutomationRule(TenantMixin, Base):
     is_active = Column(Boolean, default=True, index=True)
     execution_count = Column(Integer, default=0)
     last_executed_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     logs = relationship("AutomationLog", back_populates="rule")
 
@@ -57,6 +57,6 @@ class AutomationLog(TenantMixin, Base):
     action_result = Column(JSON, nullable=True)
     status = Column(String(20), default="success")
     error_message = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     rule = relationship("AutomationRule", back_populates="logs")

@@ -28,4 +28,4 @@ class AIRecommendation(Base, TenantMixin):
     is_read = Column(Integer, default=0)
     is_applied = Column(Integer, default=0)
 
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

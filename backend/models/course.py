@@ -50,8 +50,8 @@ class Course(Base, TenantMixin):
     max_attendees = Column(Integer, default=10)  # 团课最大人数
 
     # 时间
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 
 class CourseSchedule(Base, TenantMixin, StoreScopeMixin):
@@ -82,6 +82,6 @@ class CourseSchedule(Base, TenantMixin, StoreScopeMixin):
     # 备注
     notes = Column(Text, nullable=True)
 
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
 Course.schedules = relationship("CourseSchedule", back_populates="course")

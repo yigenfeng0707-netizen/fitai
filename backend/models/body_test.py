@@ -34,4 +34,4 @@ class BodyTestRecord(Base, TenantMixin):
 
     member = relationship("Member", back_populates="body_test_records")
 
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

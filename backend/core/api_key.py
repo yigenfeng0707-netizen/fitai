@@ -58,7 +58,7 @@ class ApiKeyService:
             user_id=user_id,
             organization_id=organization_id,
             is_active=True,
-            expires_at=datetime.now(timezone.utc) + timedelta(days=expires_in_days),
+            expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=expires_in_days),
         )
         db.add(api_key)
         await db.flush()
@@ -88,11 +88,11 @@ class ApiKeyService:
             return None
 
         # 检查是否过期
-        if api_key.expires_at and api_key.expires_at < datetime.now(timezone.utc):
+        if api_key.expires_at and api_key.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
             return None
 
         # 更新最后使用时间
-        api_key.last_used_at = datetime.now(timezone.utc)
+        api_key.last_used_at = datetime.now(timezone.utc).replace(tzinfo=None)
         await db.flush()
 
         return api_key
@@ -121,7 +121,7 @@ class ApiKeyService:
 
         # 禁用旧 Key
         old_key.is_active = False
-        old_key.revoked_at = datetime.now(timezone.utc)
+        old_key.revoked_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
         # 创建新 Key
         return await ApiKeyService.create(
@@ -152,7 +152,7 @@ class ApiKeyService:
             raise ValueError("API Key 不存在")
 
         api_key.is_active = False
-        api_key.revoked_at = datetime.now(timezone.utc)
+        api_key.revoked_at = datetime.now(timezone.utc).replace(tzinfo=None)
         await db.flush()
 
     @staticmethod

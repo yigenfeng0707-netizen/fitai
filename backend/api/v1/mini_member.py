@@ -264,8 +264,8 @@ async def get_my_bookings(
             schedule_id=booking.schedule_id,
             course_name=course_name,
             coach_name=coach_name,
-            start_time=start_time or datetime.now(timezone.utc),
-            end_time=end_time or datetime.now(timezone.utc),
+            start_time=start_time or datetime.now(timezone.utc).replace(tzinfo=None).replace(tzinfo=None),
+            end_time=end_time or datetime.now(timezone.utc).replace(tzinfo=None).replace(tzinfo=None),
             status=booking.status.value,
             check_in_time=booking.check_in_time,
             can_cancel=can_cancel,
@@ -379,7 +379,7 @@ async def mark_notification_read(
         )
 
     notification.is_read = True
-    notification.read_at = datetime.now(timezone.utc)
+    notification.read_at = datetime.now(timezone.utc).replace(tzinfo=None).replace(tzinfo=None)
     await db.flush()
 
     return BaseResponse(message="标记成功")
@@ -399,7 +399,7 @@ async def mark_all_notifications_read(
             Notification.user_id == current_user.id,
             Notification.is_read == False,  # noqa: E712
         )
-        .values(is_read=True, read_at=datetime.now(timezone.utc))
+        .values(is_read=True, read_at=datetime.now(timezone.utc).replace(tzinfo=None).replace(tzinfo=None))
     )
     await db.flush()
 

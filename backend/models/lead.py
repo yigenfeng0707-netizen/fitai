@@ -55,5 +55,5 @@ class Lead(Base, TenantMixin, StoreScopeMixin):
     assigned_to = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     converted_member_id = Column(Integer, ForeignKey("members.id"), nullable=True)
 
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

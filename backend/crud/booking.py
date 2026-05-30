@@ -78,7 +78,7 @@ class BookingCRUD:
     async def cancel(db: AsyncSession, booking: Booking, cancelled_by: int, reason: Optional[str] = None) -> Booking:
         """取消预约"""
         booking.status = BookingStatus.CANCELLED
-        booking.cancelled_at = datetime.now(timezone.utc)
+        booking.cancelled_at = datetime.now(timezone.utc).replace(tzinfo=None)
         booking.cancelled_by = cancelled_by
         booking.cancel_reason = reason
         
@@ -93,7 +93,7 @@ class BookingCRUD:
     async def check_in(db: AsyncSession, booking: Booking, method: str = "manual") -> Booking:
         """签到"""
         booking.status = BookingStatus.CHECKED_IN
-        booking.check_in_time = datetime.now(timezone.utc)
+        booking.check_in_time = datetime.now(timezone.utc).replace(tzinfo=None)
         booking.check_in_method = method
         
         await db.flush()
@@ -133,7 +133,7 @@ class BookingCRUD:
     async def get_today_bookings(db: AsyncSession, date: Optional[datetime] = None, organization_id: int = 1) -> list[Booking]:
         """获取今日预约"""
         if not date:
-            date = datetime.now(timezone.utc)
+            date = datetime.now(timezone.utc).replace(tzinfo=None)
         
         start = date.replace(hour=0, minute=0, second=0)
         end = date.replace(hour=23, minute=59, second=59)
@@ -156,7 +156,7 @@ class BookingCRUD:
     ) -> list[dict]:
         """获取今日签到数据（含会员名、课程名、排期信息）"""
         if not date:
-            date = datetime.now(timezone.utc)
+            date = datetime.now(timezone.utc).replace(tzinfo=None)
 
         start = date.replace(hour=0, minute=0, second=0)
         end = date.replace(hour=23, minute=59, second=59)

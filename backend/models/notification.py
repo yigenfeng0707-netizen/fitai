@@ -36,7 +36,7 @@ class Notification(Base, TenantMixin):
     is_read = Column(Boolean, default=False, index=True)
     link = Column(String(500), nullable=True)
     extra_data = Column(JSON, nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     read_at = Column(DateTime, nullable=True)
 
     user = relationship("User", backref="notifications")

@@ -46,8 +46,8 @@ class DailyStats(Base, TenantMixin):
     active_coaches = Column(Integer, default=0)  # 活跃教练数
     total_teaching_hours = Column(Float, default=0)  # 总教学时长
 
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     __table_args__ = (
         Index('ix_daily_stats_org_date_store', 'organization_id', 'stat_date', 'store_id', unique=True),
