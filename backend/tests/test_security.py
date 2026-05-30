@@ -60,6 +60,9 @@ class TestRateLimiter:
     def setup_method(self):
         """每个测试前清理状态"""
         _memory_store.clear()
+        # Mock Redis to force memory mode for testing
+        from backend.core import rate_limiter
+        rate_limiter._redis_client = False
 
     def test_rate_limiter_blocks_excessive_requests(self):
         """测试：超过限制后返回 429"""
