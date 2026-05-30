@@ -20,9 +20,10 @@ from backend.database_test import async_engine as async_engine_test, AsyncSessio
 
 def _reset_rate_limiter():
     """重置速率限制器状态，避免测试间相互影响"""
-    from backend.core.rate_limiter import _requests, _last_prune
-    _requests.clear()
-    _last_prune = 0.0
+    from backend.core.rate_limiter import _memory_store
+    from backend.core import rate_limiter
+    _memory_store.clear()
+    rate_limiter._redis_client = False
 
 
 def _uid():
