@@ -24,8 +24,8 @@ async def setup_db():
     async with async_engine_test.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     # 清理速率限制状态，避免测试间干扰
-    from backend.core.rate_limiter import _requests
-    _requests.clear()
+    from backend.core.rate_limiter import _memory_store
+    _memory_store.clear()
     yield
     async with async_engine_test.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
