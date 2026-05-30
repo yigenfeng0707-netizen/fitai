@@ -117,13 +117,22 @@ class TestSMSChannel:
         channel = SMSChannel()
         with patch("backend.services.notification_service.settings") as mock_settings:
             mock_settings.SMS_ENABLED = True
-            success = await channel.send(
-                user_id=1,
-                title="验证码",
-                content="您的验证码是 123456",
-                phone="13800138000",
-            )
-            assert success is True
+            mock_settings.SMS_ACCESS_KEY = "test_key"
+            mock_settings.SMS_ACCESS_SECRET = "test_secret"
+            mock_settings.SMS_SIGN_NAME = "test_sign"
+            mock_settings.SMS_TEMPLATE_CODE = "SMS_123456"
+            # Mock httpx to prevent real API call
+            with patch("backend.services.notification_service.httpx") as mock_httpx:
+                mock_response = MagicMock()
+                mock_response.json.return_value = {"Code": "OK"}
+                mock_httpx.AsyncClient.return_value.__aenter__.return_value.get.return_value = mock_response
+                success = await channel.send(
+                    user_id=1,
+                    title="验证码",
+                    content="您的验证码是 123456",
+                    phone="13800138000",
+                )
+                assert success is True
 
 
 class TestWeChatWorkChannel:
@@ -146,12 +155,20 @@ class TestWeChatWorkChannel:
         channel = WeChatWorkChannel()
         with patch("backend.services.notification_service.settings") as mock_settings:
             mock_settings.WECHAT_WORK_ENABLED = True
-            success = await channel.send(
-                user_id=1,
-                title="会议提醒",
-                content="明天10点团队会议",
-            )
-            assert success is True
+            mock_settings.WECHAT_WORK_CORP_ID = "test_corp"
+            mock_settings.WECHAT_WORK_AGENT_ID = "test_agent"
+            mock_settings.WECHAT_WORK_SECRET = "test_secret"
+            # Mock httpx to prevent real API call
+            with patch("backend.services.notification_service.httpx") as mock_httpx:
+                mock_response = MagicMock()
+                mock_response.json.return_value = {"errcode": 0}
+                mock_httpx.AsyncClient.return_value.__aenter__.return_value.post.return_value = mock_response
+                success = await channel.send(
+                    user_id=1,
+                    title="会议提醒",
+                    content="明天10点团队会议",
+                )
+                assert success is True
 
 
 class TestNotificationServiceAPI:
