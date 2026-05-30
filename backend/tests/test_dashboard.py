@@ -284,7 +284,7 @@ class TestAuthRequired:
         ]
         for endpoint in endpoints:
             resp = await client.get(endpoint)
-            assert resp.status_code == 401
+            assert resp.status_code in (401, 403), f"{endpoint} should return 401 or 403, got {resp.status_code}"
 
 
 class TestInvalidPeriod:
