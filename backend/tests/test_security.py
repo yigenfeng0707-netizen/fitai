@@ -20,7 +20,7 @@ from backend.core.rate_limiter import (
     RateLimitMiddleware,
     is_rate_limited,
     record_request,
-    _requests,
+    _memory_store,
     AUTH_LIMIT,
     GENERAL_LIMIT,
 )
@@ -59,7 +59,7 @@ class TestRateLimiter:
 
     def setup_method(self):
         """每个测试前清理状态"""
-        _requests.clear()
+        _memory_store.clear()
 
     def test_rate_limiter_blocks_excessive_requests(self):
         """测试：超过限制后返回 429"""
