@@ -112,6 +112,8 @@ const Layout = () => {
       <AntLayout style={{ background: 'transparent' }}>
         <Header style={{
           padding: '0 32px',
+          height: 72,
+          lineHeight: '72px',
           background: 'var(--glass-bg)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
@@ -123,15 +125,16 @@ const Layout = () => {
           <div style={{
             textAlign: 'center',
             flex: 1,
+            paddingTop: 8,
           }}>
             <h2 style={{
-              margin: 0, fontSize: 22, fontWeight: 800, letterSpacing: 2,
+              margin: '0 0 2px', fontSize: 21, fontWeight: 800, letterSpacing: 2, lineHeight: 1.3,
               background: 'linear-gradient(135deg, #4c1d95, #6366f1, #a855f7)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}>FitAI 智能管理平台</h2>
             <span style={{
-              fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500, letterSpacing: 1,
+              fontSize: 12, color: 'var(--text-secondary)', fontWeight: 500, letterSpacing: 1, lineHeight: 1,
             }}>健身瑜伽教培 SaaS 平台</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
