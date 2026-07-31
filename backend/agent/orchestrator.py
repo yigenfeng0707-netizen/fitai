@@ -241,6 +241,127 @@ Guidelines:
 Remember: you are an Agent that thinks step-by-step and takes actions through tools. Always plan what tools to call first, then synthesize the results into a helpful response.
 """
 
+    async def run_stream(
+        self,
+        user_input: str,
+        user_role: str,
+        organization_id: int,
+        db,
+        member_id: Optional[int] = None,
+        persona: Optional[str] = None,
+    ):
+        """
+        Streaming version of run(). Yields SSE events as the Agent progresses.
+
+        Event types:
+          - {"type": "thinking", "iteration": N}
+          - {"type": "tool_start", "tool": name, "args": {...}}
+          - {"type": "tool_result", "tool": name, "result": ...}
+          - {"type": "content", "content": "..."}  # LLM text delta
+          - {"type": "done", "iterations": N, "persona": "..."}
+          - {"type": "error", "content": "..."}
+        """
+        import json as _json
+
+        resolved_persona = resolve_persona(user_role, persona)
+        system_prompt = get_persona_prompt(resolved_persona, organization_id, user_role)
+
+        memory_context = ""
+        if member_id:
+            try:
+                memory_context = await self.memory.retrieve(member_id, organization_id, db)
+            except Exception:
+                logger.warning("Memory retrieval failed, continuing without", exc_info=True)
+
+        messages = [{"role": "system", "content": system_prompt}]
+        if memory_context:
+            messages.append({"role": "system", "content": f"Member context (long-term memory):\n{memory_context}"})
+        messages.append({"role": "user", "content": user_input})
+
+        allowed_tools = self._get_allowed_tools(user_role, resolved_persona)
+        openai_tools = self.tools.get_openai_tools(allowed_tools) if allowed_tools else None
+
+        tool_calls_log = []
+
+        for iteration in range(self.max_iterations):
+            yield _json.dumps({"type": "thinking", "iteration": iteration + 1}, ensure_ascii=False)
+
+            try:
+                response = await self.llm.chat(messages=messages, tools=openai_tools)
+            except Exception as e:
+                logger.exception("LLM call failed at iteration %d", iteration)
+                yield _json.dumps({"type": "error", "content": f"AI service unavailable: {e}"}, ensure_ascii=False)
+                return
+
+            choice = response.choices[0]
+            message = choice.message
+
+            if not message.tool_calls:
+                result = message.content or ""
+
+                if (self.reflection_enabled and len(tool_calls_log) > 0
+                        and len(result) < 80 and iteration < self.max_iterations - 1):
+                    messages.append({"role": "assistant", "content": result})
+                    messages.append({"role": "user", "content": "Your previous response was brief. Please provide a more detailed analysis based on the tool results you obtained."})
+                    continue
+
+                yield _json.dumps({"type": "content", "content": result}, ensure_ascii=False)
+
+                if member_id:
+                    try:
+                        await self.memory.store(member_id, organization_id, db, user_input, result, tool_calls_log)
+                    except Exception:
+                        logger.warning("Memory storage failed", exc_info=True)
+
+                yield _json.dumps({"type": "done", "iterations": iteration + 1, "persona": resolved_persona.value, "tool_calls": tool_calls_log}, ensure_ascii=False)
+                return
+
+            messages.append({
+                "role": "assistant",
+                "content": message.content or "",
+                "tool_calls": [
+                    {"id": tc.id, "type": "function", "function": {"name": tc.function.name, "arguments": tc.function.arguments}}
+                    for tc in message.tool_calls
+                ] if message.tool_calls else None,
+            })
+
+            for tc in message.tool_calls:
+                tool_name = tc.function.name
+                try:
+                    args = _json.loads(tc.function.arguments) if tc.function.arguments else {}
+                except _json.JSONDecodeError:
+                    args = {}
+
+                args["organization_id"] = organization_id
+                if member_id and "member_id" not in args:
+                    args["member_id"] = member_id
+
+                yield _json.dumps({"type": "tool_start", "tool": tool_name, "args": {k: v for k, v in args.items() if k != "organization_id"}}, ensure_ascii=False)
+
+                if tool_name not in allowed_tools:
+                    tool_result = {"error": f"Permission denied: role '{user_role}' cannot use tool '{tool_name}'"}
+                else:
+                    logger.info("Executing tool: %s args=%s", tool_name, {k: v for k, v in args.items() if k != "organization_id"})
+                    tool_result = await self.tools.execute(tool_name, db, **args)
+
+                tool_calls_log.append({
+                    "tool": tool_name,
+                    "args": {k: v for k, v in args.items() if k != "organization_id"},
+                    "result": tool_result,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                })
+
+                yield _json.dumps({"type": "tool_result", "tool": tool_name, "result": tool_result}, ensure_ascii=False, default=str)
+
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc.id,
+                    "content": _json.dumps(tool_result, ensure_ascii=False, default=str),
+                })
+
+        yield _json.dumps({"type": "content", "content": "I've reached the maximum number of reasoning steps. Please try narrowing down your question."}, ensure_ascii=False)
+        yield _json.dumps({"type": "done", "iterations": self.max_iterations, "persona": resolved_persona.value, "tool_calls": tool_calls_log}, ensure_ascii=False)
+
     def _get_allowed_tools(self, role: str, persona: AgentRole = None) -> set[str]:
         """Get allowed tool names based on RBAC role and persona."""
         # Start with persona-specific tools

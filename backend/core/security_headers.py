@@ -30,9 +30,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
         # Content-Security-Policy（API 服务，严格限制）
         response.headers["Content-Security-Policy"] = (
-            "default-src 'none'; "
-            "frame-ancestors 'none'; "
-            "form-action 'self'; "
+            "default-src 'none'; frame-ancestors 'none'; form-action 'self'"
         )
 
         # 隐藏服务器版本信息

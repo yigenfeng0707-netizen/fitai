@@ -7,8 +7,7 @@ Stores Agent chat history, tool calls, and metadata for:
 - Analytics: measure Agent usage and effectiveness
 """
 from datetime import datetime
-from sqlalchemy import Integer, String, Text, DateTime, func
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Integer, String, Text, DateTime, func, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.database import Base
@@ -25,7 +24,7 @@ class AgentInteractionLog(Base):
     persona: Mapped[str | None] = mapped_column(String(50), nullable=True)
     user_input: Mapped[str] = mapped_column(Text, nullable=False)
     agent_answer: Mapped[str | None] = mapped_column(Text, nullable=True)
-    tool_calls: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    tool_calls: Mapped[list | None] = mapped_column(JSON, nullable=True)
     iterations: Mapped[int | None] = mapped_column(Integer, nullable=True)
     model: Mapped[str | None] = mapped_column(String(100), nullable=True)
     tokens_used: Mapped[int | None] = mapped_column(Integer, nullable=True)

@@ -4,7 +4,10 @@ API - Agent chat endpoint.
 Natural language entry point for the FitAI Agent.
 Supports three personas: health_consultant, studio_ops, growth_engine.
 """
+import json
+
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -113,3 +116,42 @@ async def list_personas(
             },
         ]
     }
+
+
+@router.post("/chat/stream")
+async def agent_chat_stream(
+    req: AgentRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Agent chat with SSE streaming. Returns server-sent events for real-time tool calls and response."""
+    if not settings.DASHSCOPE_API_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail="Agent service not configured. Set DASHSCOPE_API_KEY in .env",
+        )
+
+    from backend.agent.bootstrap import get_orchestrator
+
+    orch = get_orchestrator(db)
+
+    async def event_generator():
+        async for event in orch.run_stream(
+            user_input=req.message,
+            user_role=current_user.role if hasattr(current_user, "role") else "front_desk",
+            organization_id=current_user.organization_id,
+            db=db,
+            member_id=req.member_id,
+            persona=req.persona,
+        ):
+            yield f"data: {event}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

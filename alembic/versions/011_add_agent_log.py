@@ -9,7 +9,6 @@ tool calls, and iteration metadata for long-term memory and audit.
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.dialects import postgresql
 
 revision = '011_add_agent_log'
 down_revision = '010_add_coupons'
@@ -18,6 +17,7 @@ depends_on = None
 
 
 def upgrade() -> None:
+    # Use JSON instead of PostgreSQL-specific JSONB for SQLite compatibility
     op.create_table(
         'agent_interaction_log',
         sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
@@ -27,7 +27,7 @@ def upgrade() -> None:
         sa.Column('persona', sa.String(50), nullable=True, comment='Agent persona used'),
         sa.Column('user_input', sa.Text(), nullable=False, comment='User natural language input'),
         sa.Column('agent_answer', sa.Text(), nullable=True, comment='Agent final response'),
-        sa.Column('tool_calls', postgresql.JSONB(astext_type=sa.Text()), nullable=True,
+        sa.Column('tool_calls', sa.JSON(), nullable=True,
                   comment='JSON array of tool call records'),
         sa.Column('iterations', sa.Integer(), nullable=True, comment='Number of ReAct loop iterations'),
         sa.Column('model', sa.String(100), nullable=True, comment='LLM model used'),

@@ -1,4 +1,5 @@
 import { defineConfig } from '@tarojs/cli'
+import path from 'path'
 
 export default defineConfig({
   projectName: 'fitai-miniapp',
@@ -13,6 +14,9 @@ export default defineConfig({
   framework: 'react',
   compiler: { type: 'webpack5', prebundle: { enable: false } },
   sass: { resource: [], projectDirectory: '' },
+  alias: {
+    '@': path.resolve(__dirname, '..', 'src'),
+  },
   miniapp: {
     postcss: {
       pxtransform: { enable: true, config: {} },
