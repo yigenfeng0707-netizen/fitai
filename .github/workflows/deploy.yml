@@ -1,0 +1,50 @@
+name: Deploy to Alibaba Cloud ECS
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to ECS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: ${{ secrets.ECS_USER }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          script: |
+            cd /root/fitai
+            GIT_SSL_NO_VERIFY=1 git pull origin master
+
+            # Build frontend
+            cd frontend
+            npm install --registry=https://registry.npmmirror.com
+            npm run build
+            cp -r dist/* /var/www/fitai/
+
+            # Install backend dependencies
+            cd /root/fitai
+            VENV=""
+            if [ -d "venv" ]; then VENV=venv;
+            elif [ -d ".venv" ]; then VENV=.venv;
+            fi
+
+            if [ -n "$VENV" ]; then
+                $VENV/bin/pip install -r requirements.txt --quiet
+                # Force reinstall psycopg2-binary (system libffi may have changed)
+                $VENV/bin/pip install --force-reinstall --no-cache psycopg2-binary --quiet
+                # Run migrations (ignore if sync engine unavailable)
+                $VENV/bin/alembic upgrade head 2>/dev/null || true
+            else
+                pip3 install -r requirements.txt --quiet
+                pip3 install --force-reinstall --no-cache psycopg2-binary --quiet
+                alembic upgrade head 2>/dev/null || true
+            fi
+
+            # Restart backend
+            sudo systemctl restart fitai
+
+            echo "Deployed at $(date)"

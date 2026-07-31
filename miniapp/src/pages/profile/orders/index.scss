@@ -1,0 +1,134 @@
+.page-orders {
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+.tabs {
+  display: flex;
+  background: #fff;
+  border-bottom: 1rpx solid #f0f0f0;
+
+  &__item {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 88rpx;
+    font-size: 28rpx;
+    color: #666;
+    position: relative;
+
+    &--active {
+      color: #7c5cfc;
+      font-weight: 500;
+
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 48rpx;
+        height: 4rpx;
+        background: #7c5cfc;
+        border-radius: 2rpx;
+      }
+    }
+  }
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 100rpx 0;
+  color: #999;
+}
+
+.order-list {
+  padding: 20rpx;
+}
+
+.order-card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20rpx;
+  }
+
+  &__no {
+    font-size: 24rpx;
+    color: #999;
+  }
+
+  &__status {
+    padding: 4rpx 16rpx;
+    border-radius: 8rpx;
+  }
+
+  &__status-text {
+    font-size: 24rpx;
+  }
+
+  &__body {
+    margin-bottom: 20rpx;
+  }
+
+  &__subject {
+    font-size: 30rpx;
+    color: #333;
+    font-weight: 500;
+    display: block;
+    margin-bottom: 8rpx;
+  }
+
+  &__time {
+    font-size: 24rpx;
+    color: #999;
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 20rpx;
+    border-top: 1rpx solid #f0f0f0;
+  }
+
+  &__amount {
+    font-size: 36rpx;
+    color: #e53e3e;
+    font-weight: 600;
+  }
+
+  &__pay-btn {
+    background: #7c5cfc;
+    padding: 12rpx 32rpx;
+    border-radius: 8rpx;
+  }
+
+  &__pay-text {
+    color: #fff;
+    font-size: 26rpx;
+  }
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 150rpx 0;
+
+  &__text {
+    font-size: 30rpx;
+    color: #999;
+  }
+}
