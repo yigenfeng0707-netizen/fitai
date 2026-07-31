@@ -29,7 +29,10 @@ def get_llm_client() -> QwenClient:
     global _llm_client
     if _llm_client is None:
         if not settings.DASHSCOPE_API_KEY:
-            logger.warning("DASHSCOPE_API_KEY not configured, Agent will fail on LLM calls")
+            logger.warning(
+                "DASHSCOPE_API_KEY not configured, Agent will fail on LLM calls. "
+                "Set it in .env or LLM_FALLBACK_* for fallback support."
+            )
         _llm_client = QwenClient()
     return _llm_client
 

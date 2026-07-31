@@ -1,9 +1,15 @@
 """
 应用配置
 """
+import os
+from pathlib import Path
 from pydantic_settings import BaseSettings
 from pydantic import field_validator, model_validator
 from functools import lru_cache
+
+# .env 文件位置：backend/.env（无论从哪个目录运行都能找到）
+_BASE_DIR = Path(__file__).resolve().parent
+_ENV_FILE = _BASE_DIR / ".env"
 
 
 class Settings(BaseSettings):
@@ -61,8 +67,17 @@ class Settings(BaseSettings):
 
     # Agent - 阿里云百炼 / 千问大模型 (Phase 3 - OPC改造)
     DASHSCOPE_API_KEY: str = ""
-    QWEN_MODEL: str = "qwen-max"
+    QWEN_MODEL: str = "qwen3.7-max"
     BAILIAN_APP_ID: str = ""
+
+    # LLM Base URL - 可配置（令牌套餐版 / 标准DashScope / 其他兼容服务）
+    LLM_BASE_URL: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+
+    # Fallback LLM 配置（主模型不可用时自动切换）
+    LLM_FALLBACK_ENABLED: bool = True
+    LLM_FALLBACK_API_KEY: str = ""
+    LLM_FALLBACK_BASE_URL: str = ""
+    LLM_FALLBACK_MODEL: str = ""
 
     # Agent - 阿里云向量检索 (可选，用于高级记忆)
     ALIYUN_VECTOR_API_KEY: str = ""
@@ -134,7 +149,7 @@ class Settings(BaseSettings):
         return self
 
     class Config:
-        env_file = ".env"
+        env_file = str(_ENV_FILE)
         env_file_encoding = "utf-8"
         case_sensitive = False
 

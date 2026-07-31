@@ -73,9 +73,12 @@ async def agent_health():
     return {
         "configured": bool(settings.DASHSCOPE_API_KEY),
         "model": settings.QWEN_MODEL,
+        "base_url": settings.LLM_BASE_URL,
         "max_iterations": settings.AGENT_MAX_ITERATIONS,
         "reflection_enabled": settings.AGENT_REFLECTION_ENABLED,
         "personas": ["health_consultant", "studio_ops", "growth_engine"],
+        "fallback_enabled": settings.LLM_FALLBACK_ENABLED and bool(settings.LLM_FALLBACK_API_KEY),
+        "fallback_model": settings.LLM_FALLBACK_MODEL or None,
     }
 
 
