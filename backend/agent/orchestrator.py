@@ -16,6 +16,7 @@ from backend.config import settings
 from backend.agent.llm.qwen_client import QwenClient
 from backend.agent.tools.registry import ToolRegistry
 from backend.agent.memory.member_memory import MemberMemoryStore
+from backend.agent.personas import AgentRole, resolve_persona, get_persona_prompt, get_persona_tools
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,13 @@ READ_ONLY_TOOLS = {
 # Tools that write/modify data (restricted by role)
 WRITE_TOOLS = {
     "book_course", "cancel_booking",
+}
+
+# Persona name aliases for backward compat
+PERSONA_ALIASES = {
+    "health": AgentRole.HEALTH_CONSULTANT,
+    "ops": AgentRole.STUDIO_OPS,
+    "growth": AgentRole.GROWTH_ENGINE,
 }
 
 
@@ -52,6 +60,7 @@ class AgentOrchestrator:
         organization_id: int,
         db,
         member_id: Optional[int] = None,
+        persona: Optional[str] = None,
     ) -> dict:
         """
         Execute the Agent loop for a user request.
@@ -62,12 +71,14 @@ class AgentOrchestrator:
             organization_id: Tenant isolation boundary
             db: Database session
             member_id: Optional context member ID
+            persona: Optional persona override ("health_consultant" / "studio_ops" / "growth_engine")
 
         Returns:
-            dict with: answer, tool_calls, iterations
+            dict with: answer, tool_calls, iterations, persona
         """
-        # 1. Build system prompt with role awareness
-        system_prompt = self._build_system_prompt(user_role, organization_id)
+        # 1. Resolve persona and build system prompt
+        resolved_persona = resolve_persona(user_role, persona)
+        system_prompt = get_persona_prompt(resolved_persona, organization_id, user_role)
 
         # 2. Retrieve long-term memory
         memory_context = ""
@@ -86,8 +97,8 @@ class AgentOrchestrator:
             })
         messages.append({"role": "user", "content": user_input})
 
-        # 4. Determine allowed tools by role
-        allowed_tools = self._get_allowed_tools(user_role)
+        # 4. Determine allowed tools by persona (intersected with role permissions)
+        allowed_tools = self._get_allowed_tools(user_role, resolved_persona)
         openai_tools = self.tools.get_openai_tools(allowed_tools) if allowed_tools else None
 
         # 5. ReAct loop
@@ -137,6 +148,7 @@ class AgentOrchestrator:
                     "answer": result,
                     "tool_calls": tool_calls_log,
                     "iterations": iteration + 1,
+                    "persona": resolved_persona.value,
                 }
 
             # Has tool calls -> execute them
@@ -193,6 +205,7 @@ class AgentOrchestrator:
             "answer": "I've reached the maximum number of reasoning steps. Please try narrowing down your question or break it into smaller parts.",
             "tool_calls": tool_calls_log,
             "iterations": self.max_iterations,
+            "persona": resolved_persona.value,
         }
 
     def _build_system_prompt(self, role: str, org_id: int) -> str:
@@ -228,12 +241,23 @@ Guidelines:
 Remember: you are an Agent that thinks step-by-step and takes actions through tools. Always plan what tools to call first, then synthesize the results into a helpful response.
 """
 
-    def _get_allowed_tools(self, role: str) -> set[str]:
-        """Get allowed tool names based on RBAC role."""
+    def _get_allowed_tools(self, role: str, persona: AgentRole = None) -> set[str]:
+        """Get allowed tool names based on RBAC role and persona."""
+        # Start with persona-specific tools
+        if persona:
+            persona_tools = get_persona_tools(persona)
+        else:
+            persona_tools = self.tools.tool_names
+
+        # Intersect with role-based permissions
         if role in ("super_admin", "owner"):
-            return self.tools.tool_names
+            # Owner/admin can use all persona tools including write ops
+            return persona_tools
         if role == "front_desk":
-            return READ_ONLY_TOOLS | {"book_course", "cancel_booking"}
+            # Front desk: read-only + booking ops within persona
+            return persona_tools & (READ_ONLY_TOOLS | {"book_course", "cancel_booking"})
         if role in ("coach", "finance"):
-            return READ_ONLY_TOOLS
-        return READ_ONLY_TOOLS
+            # Coach/finance: read-only within persona
+            return persona_tools & READ_ONLY_TOOLS
+        # Default: read-only within persona
+        return persona_tools & READ_ONLY_TOOLS

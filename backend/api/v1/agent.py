@@ -2,6 +2,7 @@
 API - Agent chat endpoint.
 
 Natural language entry point for the FitAI Agent.
+Supports three personas: health_consultant, studio_ops, growth_engine.
 """
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -18,6 +19,7 @@ router = APIRouter()
 class AgentRequest(BaseModel):
     message: str
     member_id: int | None = None
+    persona: str | None = None  # "health_consultant" / "studio_ops" / "growth_engine"
     context: dict | None = None
 
 
@@ -25,6 +27,7 @@ class AgentResponse(BaseModel):
     answer: str
     tool_calls: list[dict]
     iterations: int
+    persona: str
 
 
 @router.post("/chat", response_model=AgentResponse)
@@ -33,7 +36,7 @@ async def agent_chat(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Agent chat endpoint - natural language interaction."""
+    """Agent chat endpoint - natural language interaction with persona support."""
     if not settings.DASHSCOPE_API_KEY:
         raise HTTPException(
             status_code=503,
@@ -49,6 +52,7 @@ async def agent_chat(
         organization_id=current_user.organization_id,
         db=db,
         member_id=req.member_id,
+        persona=req.persona,
     )
     return AgentResponse(**result)
 
@@ -71,4 +75,38 @@ async def agent_health():
         "model": settings.QWEN_MODEL,
         "max_iterations": settings.AGENT_MAX_ITERATIONS,
         "reflection_enabled": settings.AGENT_REFLECTION_ENABLED,
+        "personas": ["health_consultant", "studio_ops", "growth_engine"],
+    }
+
+
+@router.get("/personas")
+async def list_personas(
+    current_user: User = Depends(get_current_user),
+):
+    """List available Agent personas with descriptions."""
+    from backend.agent.personas import AgentRole, PERSONA_TOOLS
+    return {
+        "personas": [
+            {
+                "id": AgentRole.HEALTH_CONSULTANT.value,
+                "name": "Health Consultant",
+                "name_cn": "Health Consultant",
+                "description": "Member-facing health advisor - body analysis, course recommendations, attendance tracking",
+                "tools": list(PERSONA_TOOLS[AgentRole.HEALTH_CONSULTANT]),
+            },
+            {
+                "id": AgentRole.STUDIO_OPS.value,
+                "name": "Studio Ops Assistant",
+                "name_cn": "Studio Ops Assistant",
+                "description": "Owner-facing operations brain - revenue analysis, coach performance, schedule optimization",
+                "tools": list(PERSONA_TOOLS[AgentRole.STUDIO_OPS]),
+            },
+            {
+                "id": AgentRole.GROWTH_ENGINE.value,
+                "name": "Growth Engine",
+                "name_cn": "Growth Engine",
+                "description": "Marketing-facing growth strategist - dormant reactivation, upsell, retention analysis",
+                "tools": list(PERSONA_TOOLS[AgentRole.GROWTH_ENGINE]),
+            },
+        ]
     }

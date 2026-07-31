@@ -55,6 +55,10 @@ export default function Index() {
     Taro.switchTab({ url: '/pages/profile/index' })
   }
 
+  const handleAgent = () => {
+    Taro.navigateTo({ url: '/pages/agent/index' })
+  }
+
   return (
     <View className="page-index">
       <NavBar title="FitAI" transparent />
@@ -105,6 +109,12 @@ export default function Index() {
             <Text>&#xe60d;</Text>
           </View>
           <Text className="quick-actions__text">个人中心</Text>
+        </View>
+        <View className="quick-actions__item" onClick={handleAgent}>
+          <View className="quick-actions__icon quick-actions__icon--agent">
+            <Text>&#xe610;</Text>
+          </View>
+          <Text className="quick-actions__text">AI Agent</Text>
         </View>
       </View>
 

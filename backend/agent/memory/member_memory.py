@@ -120,16 +120,26 @@ class MemberMemoryStore:
 
     async def store(self, member_id: int, organization_id: int, db: AsyncSession,
                     user_query: str, agent_answer: str, tool_calls: list) -> None:
-        """Store interaction to memory log (fire-and-forget, non-blocking on failure)."""
+        """Store interaction to database for long-term memory and audit."""
         try:
-            # Store in agent_interaction_log table (created via Alembic migration)
-            # For now, log it; the table will be created in Phase 3 migration
+            from backend.models.agent_log import AgentInteractionLog
+            log_entry = AgentInteractionLog(
+                organization_id=organization_id,
+                member_id=member_id,
+                user_input=user_query,
+                agent_answer=agent_answer,
+                tool_calls=tool_calls,
+                iterations=len(tool_calls),
+            )
+            db.add(log_entry)
+            await db.commit()
             logger.info(
                 "Agent interaction stored: member=%d org=%d query='%s' tools=%d",
                 member_id, organization_id, user_query[:50], len(tool_calls),
             )
         except Exception:
             logger.warning("Failed to store agent interaction", exc_info=True)
+            await db.rollback()
 
 
 # Helper functions to avoid importing func at module level in complex queries
